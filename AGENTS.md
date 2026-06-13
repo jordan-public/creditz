@@ -13,7 +13,7 @@ git@github.com:jordan-public/creditz.git
 Build a hackathon MVP for a **private, non-transferable gift-card / meal-card system**:
 
 - A user registers with World ID in a World Mini App.
-- An issuer reloads USDC credits for that user.
+- An issuer reloads Credits for that user.
 - A merchant generates a short-lived in-person QR invoice.
 - The user spends by proving:
   - they are the registered World ID human,
@@ -88,7 +88,6 @@ creditz/
   contracts/
     src/
       CreditRegistry.sol
-      MockUSDC.sol
     test/
   circuits/
     credit_spend/
@@ -244,7 +243,7 @@ Implement `CreditRegistry.sol` with at least:
 
 ```solidity
 function registerHuman(uint256 worldNullifierHash) external;
-function depositCredit(bytes32 commitment, uint256 amount, address asset) external;
+function issueCredit(bytes32 commitment, uint256 amount) external;
 function spend(
     bytes32 oldNullifier,
     bytes32 newCommitment,
@@ -257,7 +256,7 @@ function spend(
 
 For MVP, proof verification may be backend-mediated if onchain recursive verification is too time-consuming. If so, make the contract accept a backend signer attestation and clearly mark it as an MVP trust assumption.
 
-If using public USDC settlement, use MockUSDC locally and USDC-like test deployment for demo.
+For this MVP, Credits are the issued and spent unit. Do not require an ERC-20 backing token for issuance or merchant settlement records.
 
 ## In-person QR invoice
 
@@ -268,7 +267,7 @@ Merchant QR payload:
   "merchant_id": "campus-cafe-1",
   "merchant_address": "0x...",
   "amount": "1250000",
-  "asset": "USDC",
+  "asset": "Credits",
   "invoice_nonce": "random-128-bit",
   "expires_at": 1760000000,
   "policy_id": "campus-cafeteria-v1"
@@ -288,8 +287,8 @@ Validate:
 Make sure the final app can demonstrate:
 
 1. User registers with World ID.
-2. Issuer reloads 25 USDC cafeteria credits.
-3. Merchant creates QR invoice for 6.50 USDC.
+2. Issuer reloads 25 cafeteria Credits.
+3. Merchant creates QR invoice for 6.50 Credits.
 4. User pays in the Mini App.
 5. Debug page shows old nullifier spent and new commitment created.
 6. Replaying the same proof or invoice fails.
@@ -312,7 +311,6 @@ DATABASE_URL=
 RPC_URL=
 PRIVATE_KEY=
 CREDIT_REGISTRY_ADDRESS=
-MOCK_USDC_ADDRESS=
 BACKEND_ATTESTER_PRIVATE_KEY=
 ```
 
@@ -346,4 +344,3 @@ The project is ready when:
 - README explains the MVP trust assumptions.
 - No secrets are committed.
 - Demo video can be recorded in under 3 minutes.
-

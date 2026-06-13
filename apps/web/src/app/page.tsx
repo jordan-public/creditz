@@ -46,7 +46,7 @@ export default function Home() {
           <Landmark size={20} /> Demo target
         </h2>
         <p className="muted">
-          Register, reload 25 USDC, create a 6.50 USDC campus cafe invoice, pay it once, then replay the same invoice
+          Register, reload 25 Credits, create a 6.50 Credits campus cafe invoice, pay it once, then replay the same invoice
           to see DB-level nullifier and invoice protection reject it.
         </p>
       </section>

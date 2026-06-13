@@ -160,8 +160,8 @@ maybeDescribe("ProveKit verification and nullifier cycle", () => {
       ownerSecret,
       balance: oldBalance,
       nonce: oldNonce,
-      commitment: circuitHash(ownerSecret, fieldId("asset", "USDC"), oldBalance, fieldId("policy", "campus-cafeteria-v1"), oldNonce),
-      asset: "USDC",
+      commitment: circuitHash(ownerSecret, fieldId("asset", "Credits"), oldBalance, fieldId("policy", "campus-cafeteria-v1"), oldNonce),
+      asset: "Credits",
       policyId: "campus-cafeteria-v1",
       proofMode: "provekit"
     };
@@ -184,7 +184,7 @@ maybeDescribe("ProveKit verification and nullifier cycle", () => {
     const invoiceResponse = await call<{ invoice: Record<string, unknown> }>(createInvoice, {
       merchantId: "campus-cafe-1",
       amount: "6500000",
-      asset: "USDC",
+      asset: "Credits",
       ttlSeconds: 180
     });
     expect(invoiceResponse, JSON.stringify(invoiceResponse.body)).toMatchObject({ status: 200 });

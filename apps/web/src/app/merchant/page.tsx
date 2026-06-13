@@ -10,13 +10,13 @@ export default function MerchantPage() {
   const [amount, setAmount] = useState("6500000");
   const [payload, setPayload] = useState("");
   const [qr, setQr] = useState("");
-  const [status, setStatus] = useState("Create a short-lived invoice for 6.50 USDC.");
+  const [status, setStatus] = useState("Create a short-lived invoice for 6.50 Credits.");
 
   async function createInvoice() {
     const response = await apiFetch("/api/merchant", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ merchantId: "campus-cafe-1", amount, asset: "USDC", ttlSeconds: 180 })
+      body: JSON.stringify({ merchantId: "campus-cafe-1", amount, asset: "Credits", ttlSeconds: 180 })
     });
     const body = await response.json();
     if (!response.ok) {
@@ -36,7 +36,7 @@ export default function MerchantPage() {
       <section className="grid">
         <div className="panel form">
           <label>
-            Amount in USDC minor units
+            Amount in Credits minor units
             <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="numeric" />
           </label>
           <button className="primary" type="button" onClick={createInvoice}>

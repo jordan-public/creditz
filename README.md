@@ -6,7 +6,7 @@ The app lets an issuer load credits for a specific human, then lets that human s
 
 The first target use case is a **student cafeteria card**:
 
-- A university, parent, event organizer, or employer loads USDC-backed credits.
+- A university, parent, event organizer, or employer loads Credits backed by issuer deposits.
 - The student spends at approved merchants by scanning a live merchant QR code.
 - Spending requires World ID approval from the registered human.
 - A Noir/ProveKit proof privately proves that the hidden balance is sufficient and updates the remaining balance.
@@ -101,12 +101,12 @@ A third party can issue credits without the recipient being present, as long as 
 Example:
 
 ```text
-University deposits 100 USDC
+University issues 100 Credits
 policy_id = campus_cafeteria_policy
-recipient_commitment = H(owner_secret_or_public_deposit_key, USDC, 100, policy_id, nonce)
+recipient_commitment = H(owner_secret_or_public_deposit_key, Credits, 100, policy_id, nonce)
 ```
 
-The issuer deposits USDC into the Creditz contract and creates a new private note commitment for the recipient.
+The issuer creates a new private Credits note commitment for the recipient.
 
 For the hackathon MVP, use a simpler recipient flow:
 
@@ -123,7 +123,7 @@ The merchant POS shows a QR code containing:
   "merchant_id": "campus-cafe-1",
   "merchant_address": "0x...",
   "amount": "1250000",
-  "asset": "USDC",
+  "asset": "Credits",
   "invoice_nonce": "random-128-bit",
   "expires_at": 1760000000,
   "policy_id": "campus-cafeteria-v1"
@@ -136,11 +136,11 @@ The app generates a Noir/ProveKit proof that:
 
 ```text
 I know owner_secret, balance, policy_id, nonce.
-old_commitment = H(owner_secret, USDC, balance, policy_id, nonce)
+old_commitment = H(owner_secret, Credits, balance, policy_id, nonce)
 old_nullifier = H(owner_secret, nonce)
 balance >= amount
 new_balance = balance - amount
-new_commitment = H(owner_secret, USDC, new_balance, policy_id, new_nonce)
+new_commitment = H(owner_secret, Credits, new_balance, policy_id, new_nonce)
 merchant_id is approved for policy_id
 invoice_nonce and expires_at are included in the public payment statement
 ```
@@ -153,7 +153,7 @@ The contract or backend verifies both proofs, marks the old nullifier as spent, 
 
 The public system sees that a valid note was spent and a new commitment was created. It does not learn the remaining balance.
 
-If the MVP pays the merchant with public USDC, the merchant and chain see the payment amount. If a later version routes the merchant receipt into a private note, the amount and recipient flow can also be hidden.
+If the MVP settles the merchant publicly, the merchant and chain see the payment amount. If a later version routes the merchant receipt into a private note, the amount and recipient flow can also be hidden.
 
 ## Why World ID is essential
 
@@ -185,7 +185,7 @@ Build the smallest demo that proves the product:
 
 1. World Mini App frontend.
 2. Registration with World ID.
-3. Issuer reload screen that creates a USDC credit note.
+3. Issuer reload screen that creates a Credits note.
 4. Merchant POS page that generates a short-lived QR invoice.
 5. Student spend screen that scans/pastes invoice, generates a Noir proof, requests World ID proof, and submits payment.
 6. Contract or backend ledger that stores commitments and nullifiers.
@@ -218,7 +218,7 @@ Smart contracts on World Chain
   ├── CreditRegistry.sol
   ├── stores commitments and spent nullifiers
   ├── verifies proof or accepts backend attestation for MVP
-  └── settles USDC to merchant
+  └── records merchant settlement claims denominated in Credits
 ```
 
 For a more complete onchain version, use a recursive verifier or Groth16 wrapper for the Noir proof.
@@ -263,10 +263,10 @@ Target ProveKit requirements:
 
 ### Optional sponsor overlap
 
-- **Arc / Dynamic / Unlink**: private USDC payments or private nanopayments.
+- **Arc / Dynamic / Unlink**: private Credits payments or private nanopayments.
 - **ENS**: merchant names such as `cafeteria.school.eth` and human-readable issuer identities.
 - **Ledger**: higher-risk issuer admin operations or reload approvals secured by Ledger.
-- **LI.FI / Uniswap**: reload credits from any token and settle as USDC.
+- **LI.FI / Uniswap**: future funding rails if Credits become redeemable through external assets.
 
 ## Security considerations
 
@@ -360,7 +360,7 @@ If the tunnel URL changes, update `PAGES_API_BASE_URL` and rerun the Pages workf
 ## Demo Script
 
 1. Go to `/register`, generate a deposit key, and verify/register with World ID or demo mode.
-2. Go to `/issuer` and reload `25000000` minor units of USDC.
+2. Go to `/issuer` and reload `25000000` minor units of Credits.
 3. Go to `/merchant` and create a `6500000` minor-unit Campus Cafe QR invoice.
 4. Copy the invoice payload into `/spend`, verify the human spend, and pay.
 5. Open `/debug` to see the old nullifier spent, the invoice marked paid, and a new commitment created.
@@ -385,6 +385,8 @@ pnpm proof:demo
 
 The `zk-proof` branch tightens `mode=provekit`: the backend requires a proof envelope with scheme `provekit-noir-credit-spend-v1`, circuit `credit_spend`, and a `public_inputs_hash` that matches the submitted spend statement. Set `PROVEKIT_VERIFY_BIN` to an external verifier executable to make the API call a real ProveKit verifier before accepting the spend. Without that verifier, ProveKit mode is rejected instead of accepting a placeholder proof.
 
+The `on-chain` branch introduces `LEDGER_MODE=onchain`. With that mode enabled, the backend verifies World ID and ProveKit proofs, then records commitments, spent nullifiers, issuer deposits, and merchant settlement records through `CreditRegistry.sol`. SQLite remains as the hackathon user/invoice/debug index until an event indexer is added.
+
 To test the complete proof, verification, and nullification cycle with a real ProveKit proof, build the ProveKit CLI from the upstream `v1` branch, prepare keys for `circuits/credit_spend`, generate a proof from `circuits/credit_spend/Prover.toml.example`, and point the opt-in test at those artifacts:
 
 ```bash
@@ -401,7 +403,7 @@ That test submits the proof through `/api/spend`, checks that the new commitment
 
 The Mini App spend screen uses the same verifier path. The issuer page creates a circuit-compatible local note, `/spend` asks `/api/provekit/prove` to generate a proof from that note and the merchant invoice, then submits the returned proof envelope to `/api/spend`. For a real phone demo, run the backend with `PROVEKIT_CLI`, `PROVEKIT_PROVER_KEY`, `PROVEKIT_VERIFIER_KEY`, `PROVEKIT_VERIFY_BIN=node`, and `PROVEKIT_VERIFY_ARGS=/absolute/path/to/scripts/provekit-verify.mjs` set. MVP limitation: proving currently happens on the backend, so the backend temporarily receives the private note witness. Verification and nullifier enforcement are real; client-side or delegated private proving is future work.
 
-Spend nullifier checks are enforced before ledger mutation and backed by a DB primary key:
+Spend nullifier checks are enforced before ledger mutation and backed by either the SQLite primary key or, in `LEDGER_MODE=onchain`, the registry contract:
 
 - old commitment must belong to the spending user,
 - old nullifier must not already be spent,
@@ -413,8 +415,9 @@ Spend nullifier checks are enforced before ledger mutation and backed by a DB pr
 `contracts/src/CreditRegistry.sol` implements the required entry points:
 
 - `registerHuman(uint256 worldNullifierHash)`
-- `depositCredit(bytes32 commitment, uint256 amount, address asset)`
+- `issueCredit(bytes32 commitment, uint256 amount)`
 - `spend(bytes32 oldNullifier, bytes32 newCommitment, address merchant, uint256 amount, bytes proof, bytes worldProofOrBackendAttestation)`
+- `spendPrivateCredits(bytes32 oldCommitment, bytes32 oldNullifier, bytes32 newCommitment, bytes32 policyId, bytes32 invoiceNonce, address merchant, uint256 amount, bytes proof, bytes backendAttestation)`
 
 For the MVP, spend accepts a backend signer attestation instead of performing onchain recursive proof verification. This is explicitly a hackathon trust assumption.
 

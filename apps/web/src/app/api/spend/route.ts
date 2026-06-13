@@ -1,5 +1,6 @@
-import { get, run, transaction } from "@/lib/server/db";
+import { get, run } from "@/lib/server/db";
 import { json, options } from "@/lib/server/http";
+import { commitmentExists, nullifierSpent, recordSpend } from "@/lib/server/ledger";
 import { verifySpendProof, type SpendProof } from "@/lib/server/proof";
 import { verifyWorldProof } from "@/lib/server/world";
 import { equivalentField } from "@/lib/proof-ids";
@@ -41,75 +42,42 @@ export async function POST(request: Request) {
   }
 
   try {
-    transaction(() => {
-      const invoice = get<{
-        paid_at: string | null;
-        expires_at: number;
-        amount: string;
-        policy_id: string;
-        asset: string;
-        merchant_id: string;
-      }>(
-        "select paid_at, expires_at, amount, policy_id, asset, merchant_id from invoices where invoice_nonce = @invoice_nonce",
-        { invoice_nonce: proof.invoice_nonce }
-      );
-      if (!invoice) throw new Error("Invoice does not exist.");
-      if (invoice.paid_at) throw new Error("Invoice has already been paid.");
-      if (invoice.expires_at < Math.floor(Date.now() / 1000)) throw new Error("Invoice is expired.");
-      if (invoice.amount !== proof.amount) throw new Error("Invoice amount mismatch.");
-      if (!equivalentField("policy", invoice.policy_id, proof.policy_id)) throw new Error("Invoice policy mismatch.");
-      if (!equivalentField("asset", invoice.asset, proof.asset_id)) throw new Error("Invoice asset mismatch.");
-      if (!equivalentField("merchant", invoice.merchant_id, proof.merchant_id)) throw new Error("Invoice merchant mismatch.");
+    const invoice = get<{
+      paid_at: string | null;
+      expires_at: number;
+      amount: string;
+      policy_id: string;
+      asset: string;
+      merchant_id: string;
+    }>(
+      "select paid_at, expires_at, amount, policy_id, asset, merchant_id from invoices where invoice_nonce = @invoice_nonce",
+      { invoice_nonce: proof.invoice_nonce }
+    );
+    if (!invoice) throw new Error("Invoice does not exist.");
+    if (invoice.paid_at) throw new Error("Invoice has already been paid.");
+    if (invoice.expires_at < Math.floor(Date.now() / 1000)) throw new Error("Invoice is expired.");
+    if (invoice.amount !== proof.amount) throw new Error("Invoice amount mismatch.");
+    if (!equivalentField("policy", invoice.policy_id, proof.policy_id)) throw new Error("Invoice policy mismatch.");
+    if (!equivalentField("asset", invoice.asset, proof.asset_id)) throw new Error("Invoice asset mismatch.");
+    if (!equivalentField("merchant", invoice.merchant_id, proof.merchant_id)) throw new Error("Invoice merchant mismatch.");
 
-      const merchant = get(
-        "select merchant_id from merchants where merchant_id = @merchant_id and policy_id = @policy_id",
-        {
-          merchant_id: invoice.merchant_id,
-          policy_id: invoice.policy_id
-        }
-      );
-      if (!merchant) throw new Error("Merchant is not approved for this policy.");
+    const merchant = get<{ merchant_address: string }>(
+      "select merchant_address from merchants where merchant_id = @merchant_id and policy_id = @policy_id",
+      {
+        merchant_id: invoice.merchant_id,
+        policy_id: invoice.policy_id
+      }
+    );
+    if (!merchant) throw new Error("Merchant is not approved for this policy.");
 
-      const spentNullifier = get("select nullifier from spent_nullifiers where nullifier = @nullifier", {
-        nullifier: proof.old_nullifier
-      });
-      if (spentNullifier) throw new Error("Nullifier has already been spent.");
+    if (await nullifierSpent(proof.old_nullifier)) throw new Error("Nullifier has already been spent.");
+    if (!(await commitmentExists(proof.old_commitment, userId))) throw new Error("Old commitment is not known for this user.");
+    if (await commitmentExists(proof.new_commitment)) throw new Error("New commitment already exists.");
 
-      const oldCommitment = get("select commitment from commitments where commitment = @commitment and user_id = @user_id", {
-        commitment: proof.old_commitment,
-        user_id: userId
-      });
-      if (!oldCommitment) throw new Error("Old commitment is not known for this user.");
-
-      const newCommitment = get("select commitment from commitments where commitment = @commitment", {
-        commitment: proof.new_commitment
-      });
-      if (newCommitment) throw new Error("New commitment already exists.");
-
-      run(
-        `insert into spent_nullifiers(nullifier, invoice_nonce, spent_at)
-         values (@nullifier, @invoice_nonce, @spent_at)`,
-        {
-          nullifier: proof.old_nullifier,
-          invoice_nonce: proof.invoice_nonce,
-          spent_at: new Date().toISOString()
-        }
-      );
-      run(
-        `insert into commitments(commitment, user_id, asset, policy_id, created_at)
-         values (@commitment, @user_id, @asset, @policy_id, @created_at)`,
-        {
-          commitment: proof.new_commitment,
-          user_id: userId,
-          asset: proof.asset_id,
-          policy_id: proof.policy_id,
-          created_at: new Date().toISOString()
-        }
-      );
-      run("update invoices set paid_at = @paid_at where invoice_nonce = @invoice_nonce", {
-        paid_at: new Date().toISOString(),
-        invoice_nonce: proof.invoice_nonce
-      });
+    await recordSpend({ userId, proof, merchantAddress: merchant.merchant_address });
+    run("update invoices set paid_at = @paid_at where invoice_nonce = @invoice_nonce", {
+      paid_at: new Date().toISOString(),
+      invoice_nonce: proof.invoice_nonce
     });
   } catch (error) {
     return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, { status: 409 });

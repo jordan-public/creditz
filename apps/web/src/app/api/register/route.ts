@@ -1,5 +1,6 @@
 import { run } from "@/lib/server/db";
 import { json, options } from "@/lib/server/http";
+import { recordHumanRegistration } from "@/lib/server/ledger";
 import { verifyWorldProof } from "@/lib/server/world";
 
 export const OPTIONS = options;
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
   const userId = `usr_${String(verification.nullifierHash).slice(-12)}`;
   try {
+    await recordHumanRegistration(String(verification.nullifierHash));
     run(
       `insert into users(id, world_nullifier_hash, deposit_public_key, created_at)
        values (@id, @world_nullifier_hash, @deposit_public_key, @created_at)
