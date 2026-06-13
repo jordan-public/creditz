@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { NextResponse } from "next/server";
 import { get, run } from "@/lib/server/db";
+import { json, options } from "@/lib/server/http";
+
+export const OPTIONS = options;
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -11,7 +13,7 @@ export async function POST(request: Request) {
   };
 
   if (!body.amount || BigInt(body.amount) <= 0n) {
-    return NextResponse.json({ ok: false, error: "Amount must be positive." }, { status: 400 });
+    return json({ ok: false, error: "Amount must be positive." }, { status: 400 });
   }
 
   const merchant = get<{ merchant_id: string; merchant_address: string; policy_id: string; display_name: string }>(
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
     { merchant_id: body.merchantId ?? "campus-cafe-1" }
   );
   if (!merchant) {
-    return NextResponse.json({ ok: false, error: "Merchant is not approved." }, { status: 404 });
+    return json({ ok: false, error: "Merchant is not approved." }, { status: 404 });
   }
 
   const invoice = {
@@ -38,5 +40,5 @@ export async function POST(request: Request) {
     invoice
   );
 
-  return NextResponse.json({ ok: true, invoice });
+  return json({ ok: true, invoice });
 }

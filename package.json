@@ -4,7 +4,10 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm --filter @creditz/web dev",
+    "dev:backend:pages": "ALLOWED_ORIGIN=https://jordan-public.github.io NEXT_PUBLIC_APP_URL=https://jordan-public.github.io/creditz pnpm --filter @creditz/web dev",
+    "tunnel:backend": "pnpm dlx localtunnel --port 3000 --subdomain creditz-jordan",
     "build": "pnpm --filter @creditz/web build",
+    "build:pages": "node scripts/build-pages.mjs",
     "lint": "pnpm --filter @creditz/web lint",
     "test": "pnpm --filter @creditz/web test",
     "test:contracts": "forge test --root contracts",

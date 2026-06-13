@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { apiFetch } from "@/lib/api-client";
 
 type DebugState = Record<string, Array<Record<string, unknown>>>;
 
@@ -9,7 +10,7 @@ export default function DebugPage() {
   const [state, setState] = useState<DebugState | null>(null);
 
   async function load() {
-    const response = await fetch("/api/debug", { cache: "no-store" });
+    const response = await apiFetch("/api/debug", { cache: "no-store" });
     setState(await response.json());
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { apiFetch } from "@/lib/api-client";
 import { makeCommitment, randomHex, saveLocalNote } from "@/lib/client-note";
 
 export default function IssuerPage() {
@@ -19,7 +20,7 @@ export default function IssuerPage() {
     const nonce = randomHex(16);
     const asset = "USDC";
     const commitment = makeCommitment(ownerSecret, asset, amount, policyId, nonce);
-    const response = await fetch("/api/reload", {
+    const response = await apiFetch("/api/reload", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ userId, commitment, amount, asset, policyId })

@@ -323,6 +323,40 @@ pnpm check:circuit
 
 For mobile Mini App testing, expose the Next.js dev server through ngrok, zrok, or tunnelmole, then configure that public URL in the World Developer Portal and open it in World App.
 
+## GitHub Pages + Local Backend
+
+GitHub Pages can serve only the static frontend. The Creditz backend must still run on this machine or another server.
+
+To use GitHub Pages as the frontend:
+
+1. Run the backend locally:
+
+```bash
+pnpm dev:backend:pages
+```
+
+2. Expose this machine with an HTTPS tunnel:
+
+```bash
+pnpm tunnel:backend
+```
+
+3. In GitHub repo settings, enable Pages from GitHub Actions. The workflow defaults to:
+
+```text
+https://creditz-jordan.loca.lt
+```
+
+You can override it by setting repository variable `PAGES_API_BASE_URL` to a different tunnel URL.
+
+4. Push to `main`. The Pages workflow builds the static frontend at:
+
+```text
+https://jordan-public.github.io/creditz
+```
+
+If the tunnel URL changes, update `PAGES_API_BASE_URL` and rerun the Pages workflow.
+
 ## Demo Script
 
 1. Go to `/register`, generate a deposit key, and verify/register with World ID or demo mode.

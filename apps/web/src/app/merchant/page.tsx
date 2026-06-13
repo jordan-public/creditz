@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import QRCode from "qrcode";
 import { AppShell } from "@/components/AppShell";
+import { apiFetch } from "@/lib/api-client";
 
 export default function MerchantPage() {
   const [amount, setAmount] = useState("6500000");
@@ -12,7 +13,7 @@ export default function MerchantPage() {
   const [status, setStatus] = useState("Create a short-lived invoice for 6.50 USDC.");
 
   async function createInvoice() {
-    const response = await fetch("/api/merchant", {
+    const response = await apiFetch("/api/merchant", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ merchantId: "campus-cafe-1", amount, asset: "USDC", ttlSeconds: 180 })

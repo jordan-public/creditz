@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { WorldIdButton } from "@/components/WorldIdButton";
+import { apiFetch } from "@/lib/api-client";
 import { randomHex } from "@/lib/client-note";
 
 export default function RegisterPage() {
@@ -39,7 +40,7 @@ export default function RegisterPage() {
               label="Verify and register"
               onVerified={async (proof) => {
                 const key = ensureDepositKey();
-                const response = await fetch("/api/register", {
+                const response = await apiFetch("/api/register", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
                   body: JSON.stringify({ worldProof: proof, depositPublicKey: key })

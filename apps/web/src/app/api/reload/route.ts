@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
 import { get, run } from "@/lib/server/db";
+import { json, options } from "@/lib/server/http";
+
+export const OPTIONS = options;
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -11,12 +13,12 @@ export async function POST(request: Request) {
   };
 
   if (!body.userId || !body.commitment || !body.amount || BigInt(body.amount) <= 0n) {
-    return NextResponse.json({ ok: false, error: "Missing user, commitment, or positive amount." }, { status: 400 });
+    return json({ ok: false, error: "Missing user, commitment, or positive amount." }, { status: 400 });
   }
 
   const user = get("select id from users where id = @id", { id: body.userId });
   if (!user) {
-    return NextResponse.json({ ok: false, error: "User is not registered." }, { status: 404 });
+    return json({ ok: false, error: "User is not registered." }, { status: 404 });
   }
 
   try {
@@ -32,8 +34,8 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    return NextResponse.json({ ok: false, error: String(error) }, { status: 409 });
+    return json({ ok: false, error: String(error) }, { status: 409 });
   }
 
-  return NextResponse.json({ ok: true, commitment: body.commitment });
+  return json({ ok: true, commitment: body.commitment });
 }

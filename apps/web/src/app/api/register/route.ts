@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
 import { run } from "@/lib/server/db";
+import { json, options } from "@/lib/server/http";
 import { verifyWorldProof } from "@/lib/server/world";
+
+export const OPTIONS = options;
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -11,7 +13,7 @@ export async function POST(request: Request) {
   const action = process.env.NEXT_PUBLIC_WORLD_ACTION_REGISTER ?? "creditz-register-v1";
   const verification = await verifyWorldProof(action, body.worldProof ?? {}, body.depositPublicKey ?? "");
   if (!verification.ok || !verification.nullifierHash) {
-    return NextResponse.json({ ok: false, error: verification.error ?? "World ID proof required." }, { status: 401 });
+    return json({ ok: false, error: verification.error ?? "World ID proof required." }, { status: 401 });
   }
 
   const userId = `usr_${String(verification.nullifierHash).slice(-12)}`;
@@ -28,8 +30,8 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    return NextResponse.json({ ok: false, error: String(error) }, { status: 409 });
+    return json({ ok: false, error: String(error) }, { status: 409 });
   }
 
-  return NextResponse.json({ ok: true, userId, worldNullifierHash: verification.nullifierHash });
+  return json({ ok: true, userId, worldNullifierHash: verification.nullifierHash });
 }

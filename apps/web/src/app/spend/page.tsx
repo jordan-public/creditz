@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { WorldIdButton } from "@/components/WorldIdButton";
+import { apiFetch } from "@/lib/api-client";
 import { loadLocalNote, makeCommitment, makeNullifier, randomHex, saveLocalNote } from "@/lib/client-note";
 
 type Invoice = {
@@ -65,7 +66,7 @@ export default function SpendPage() {
       current_time_or_block_time: Math.floor(Date.now() / 1000)
     };
 
-    const response = await fetch("/api/spend", {
+    const response = await apiFetch("/api/spend", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ userId, proof, worldProof })
