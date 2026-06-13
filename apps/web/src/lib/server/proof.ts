@@ -17,7 +17,7 @@ export type SpendProof = {
 };
 
 export type ProveKitProofEnvelope = {
-  scheme: "provekit-noir-credit-spend-v1";
+  scheme: "provekit-noir-credit-spend-v1" | "bb-ultrahonk-credit-spend-v1";
   circuit: "credit_spend";
   public_inputs_hash: string;
   proof: string;
@@ -120,11 +120,20 @@ export async function verifySpendProof(statement: SpendProof): Promise<ProofVeri
     if (!envelope) {
       return { ok: false, error: "Missing ProveKit proof envelope." };
     }
-    if (envelope.scheme !== "provekit-noir-credit-spend-v1" || envelope.circuit !== "credit_spend") {
+    if ((envelope.scheme !== "provekit-noir-credit-spend-v1" && envelope.scheme !== "bb-ultrahonk-credit-spend-v1") || envelope.circuit !== "credit_spend") {
       return { ok: false, error: "Unsupported ProveKit proof envelope." };
     }
     if (envelope.public_inputs_hash !== publicInputsHash(statement)) {
       return { ok: false, error: "ProveKit proof is not bound to these public inputs." };
+    }
+    if (envelope.scheme === "bb-ultrahonk-credit-spend-v1") {
+      if (!/^0x[0-9a-fA-F]+$/.test(envelope.proof)) {
+        return { ok: false, error: "On-chain proof must be hex-encoded." };
+      }
+      if (process.env.LEDGER_MODE === "onchain") {
+        return { ok: true };
+      }
+      return { ok: false, error: "On-chain UltraHonk proofs require LEDGER_MODE=onchain." };
     }
     return runExternalVerifier(statement, envelope);
   }

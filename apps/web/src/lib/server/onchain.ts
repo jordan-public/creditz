@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, encodePacked, http, keccak256, stringToHex, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, stringToHex, type Address, type Hex } from "viem";
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
 import { bytes32 } from "@/lib/proof-ids";
 import type { SpendProof } from "./proof";
@@ -71,12 +71,15 @@ export const CREDIT_REGISTRY_ABI = [
       { name: "oldCommitment", type: "bytes32" },
       { name: "oldNullifier", type: "bytes32" },
       { name: "newCommitment", type: "bytes32" },
+      { name: "assetId", type: "bytes32" },
       { name: "policyId", type: "bytes32" },
+      { name: "merchantId", type: "bytes32" },
       { name: "invoiceNonce", type: "bytes32" },
+      { name: "expiresAt", type: "uint256" },
+      { name: "currentTimeOrBlockTime", type: "uint256" },
       { name: "merchant", type: "address" },
       { name: "amount", type: "uint256" },
-      { name: "proof", type: "bytes" },
-      { name: "backendAttestation", type: "bytes" }
+      { name: "proof", type: "bytes" }
     ],
     outputs: []
   }
@@ -122,34 +125,11 @@ function clients() {
 }
 
 function proofBytes(proof: SpendProof) {
-  return stringToHex(JSON.stringify(proof.proof ?? proof));
-}
-
-async function privateCreditAttestation(proof: SpendProof, merchant: Address) {
-  const account = process.env.BACKEND_ATTESTER_PRIVATE_KEY
-    ? privateKeyToAccount(normalizePrivateKey(process.env.BACKEND_ATTESTER_PRIVATE_KEY))
-    : signerAccount();
-  const { publicClient } = clients();
-  const chainId = await publicClient.getChainId();
-  const proofPayload = proofBytes(proof);
-  const digest = keccak256(
-    encodePacked(
-      ["address", "uint256", "bytes32", "bytes32", "bytes32", "bytes32", "bytes32", "address", "uint256", "bytes32"],
-      [
-        registryAddress(),
-        BigInt(chainId),
-        proof.old_commitment as Hex,
-        proof.old_nullifier as Hex,
-        proof.new_commitment as Hex,
-        bytes32(proof.policy_id) as Hex,
-        bytes32(proof.invoice_nonce) as Hex,
-        merchant,
-        BigInt(proof.amount),
-        keccak256(proofPayload)
-      ]
-    )
-  );
-  return account.signMessage({ message: { raw: digest } });
+  const envelope = proof.proof;
+  if (typeof envelope === "object" && envelope?.scheme === "bb-ultrahonk-credit-spend-v1" && typeof envelope.proof === "string" && envelope.proof.startsWith("0x")) {
+    return envelope.proof as Hex;
+  }
+  return stringToHex(JSON.stringify(envelope ?? proof));
 }
 
 export async function onchainCommitmentExists(commitment: string) {
@@ -235,7 +215,6 @@ export async function onchainIssueCredit(commitment: string, amount: string) {
 export async function onchainSpendPrivateCredits(proof: SpendProof, merchant: Address) {
   const { publicClient, walletClient, account } = clients();
   const proofPayload = proofBytes(proof);
-  const attestation = await privateCreditAttestation(proof, merchant);
   const hash = await walletClient.writeContract({
     account,
     chain: null,
@@ -246,12 +225,15 @@ export async function onchainSpendPrivateCredits(proof: SpendProof, merchant: Ad
       proof.old_commitment as Hex,
       proof.old_nullifier as Hex,
       proof.new_commitment as Hex,
+      bytes32(proof.asset_id) as Hex,
       bytes32(proof.policy_id) as Hex,
+      bytes32(proof.merchant_id) as Hex,
       bytes32(proof.invoice_nonce) as Hex,
+      BigInt(proof.expires_at),
+      BigInt(proof.current_time_or_block_time),
       merchant,
       BigInt(proof.amount),
-      proofPayload,
-      attestation
+      proofPayload
     ]
   });
   await publicClient.waitForTransactionReceipt({ hash });

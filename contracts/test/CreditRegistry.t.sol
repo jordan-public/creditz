@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.27;
 
 import {CreditRegistry} from "../src/CreditRegistry.sol";
 
@@ -12,21 +12,27 @@ contract CreditRegistryTest {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     uint256 private constant ATTESTER_KEY = 0xA11CE;
+    MockCreditSpendVerifier private verifier;
     CreditRegistry private registry;
 
     struct PrivateSpendCase {
         bytes32 oldCommitment;
         bytes32 oldNullifier;
         bytes32 newCommitment;
+        bytes32 assetId;
         bytes32 policyId;
+        bytes32 merchantId;
         bytes32 invoiceNonce;
+        uint256 expiresAt;
+        uint256 currentTimeOrBlockTime;
         address merchant;
         uint256 amount;
         bytes proof;
     }
 
     function setUp() public {
-        registry = new CreditRegistry(vm.addr(ATTESTER_KEY));
+        verifier = new MockCreditSpendVerifier();
+        registry = new CreditRegistry(vm.addr(ATTESTER_KEY), address(verifier));
     }
 
     function testRegisterHumanRejectsDuplicateNullifier() public {
@@ -82,8 +88,12 @@ contract CreditRegistryTest {
             oldCommitment: keccak256("old-private-note"),
             oldNullifier: keccak256("old-private-nullifier"),
             newCommitment: keccak256("new-private-note"),
-            policyId: keccak256("campus-cafeteria-v1"),
+            assetId: bytes32(uint256(1001)),
+            policyId: bytes32(uint256(2001)),
+            merchantId: bytes32(uint256(3001)),
             invoiceNonce: keccak256("invoice-1"),
+            expiresAt: block.timestamp + 1 hours,
+            currentTimeOrBlockTime: block.timestamp,
             merchant: address(0xCAFE),
             amount: 6500000,
             proof: hex"9876"
@@ -118,8 +128,12 @@ contract CreditRegistryTest {
             oldCommitment: keccak256("policy-old-note"),
             oldNullifier: keccak256("policy-nullifier"),
             newCommitment: keccak256("policy-new-note"),
-            policyId: keccak256("campus-cafeteria-v1"),
+            assetId: bytes32(uint256(1001)),
+            policyId: bytes32(uint256(2001)),
+            merchantId: bytes32(uint256(3001)),
             invoiceNonce: keccak256("policy-invoice"),
+            expiresAt: block.timestamp + 1 hours,
+            currentTimeOrBlockTime: block.timestamp,
             merchant: address(0xBEEF),
             amount: 1e6,
             proof: hex"1122"
@@ -134,6 +148,31 @@ contract CreditRegistryTest {
 
     function trySpendPrivateCredits(PrivateSpendCase memory spendCase) external {
         _spendPrivateCredits(spendCase);
+    }
+
+    function testPrivateCreditSpendRejectsInvalidProof() public {
+        PrivateSpendCase memory spendCase = PrivateSpendCase({
+            oldCommitment: keccak256("invalid-proof-old-note"),
+            oldNullifier: keccak256("invalid-proof-nullifier"),
+            newCommitment: keccak256("invalid-proof-new-note"),
+            assetId: bytes32(uint256(1001)),
+            policyId: bytes32(uint256(2001)),
+            merchantId: bytes32(uint256(3001)),
+            invoiceNonce: keccak256("invalid-proof-invoice"),
+            expiresAt: block.timestamp + 1 hours,
+            currentTimeOrBlockTime: block.timestamp,
+            merchant: address(0xCAFE),
+            amount: 1e6,
+            proof: hex"1122"
+        });
+
+        registry.issueCredit(spendCase.oldCommitment, 25e6);
+        registry.approveMerchant(spendCase.policyId, spendCase.merchant, true);
+        verifier.setAccept(false);
+
+        try this.trySpendPrivateCredits(spendCase) {
+            revert("invalid proof accepted");
+        } catch {}
     }
 
     function _signature(bytes32 oldNullifier, bytes32 newCommitment, address merchant, uint256 amount, bytes memory proof)
@@ -180,21 +219,27 @@ contract CreditRegistryTest {
             spendCase.oldCommitment,
             spendCase.oldNullifier,
             spendCase.newCommitment,
+            spendCase.assetId,
             spendCase.policyId,
+            spendCase.merchantId,
             spendCase.invoiceNonce,
+            spendCase.expiresAt,
+            spendCase.currentTimeOrBlockTime,
             spendCase.merchant,
             spendCase.amount,
-            spendCase.proof,
-            _privateCreditSignature(
-                spendCase.oldCommitment,
-                spendCase.oldNullifier,
-                spendCase.newCommitment,
-                spendCase.policyId,
-                spendCase.invoiceNonce,
-                spendCase.merchant,
-                spendCase.amount,
-                spendCase.proof
-            )
+            spendCase.proof
         );
+    }
+}
+
+contract MockCreditSpendVerifier {
+    bool private accept = true;
+
+    function setAccept(bool nextAccept) external {
+        accept = nextAccept;
+    }
+
+    function verify(bytes calldata, bytes32[] calldata publicInputs) external view returns (bool) {
+        return accept && publicInputs.length == 10;
     }
 }

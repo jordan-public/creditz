@@ -411,6 +411,8 @@ That test submits the proof through `/api/spend`, checks that the new commitment
 
 The Mini App spend screen uses the same verifier path. The issuer page creates a circuit-compatible local note, `/spend` asks `/api/provekit/prove` to generate a proof from that note and the merchant invoice, then submits the returned proof envelope to `/api/spend`. For a real phone demo, run the backend with `PROVEKIT_CLI`, `PROVEKIT_PROVER_KEY`, `PROVEKIT_VERIFIER_KEY`, `PROVEKIT_VERIFY_BIN=node`, and `PROVEKIT_VERIFY_ARGS=/absolute/path/to/scripts/provekit-verify.mjs` set. MVP limitation: proving currently happens on the backend, so the backend temporarily receives the private note witness. Verification and nullifier enforcement are real; client-side or delegated private proving is future work.
 
+There is also an experimental EVM verifier path. `contracts/src/generated/CreditSpendVerifier.sol` is generated from the Noir circuit with Barretenberg UltraHonk, `CreditRegistry.sol` can call that verifier directly, and on-chain mode can generate hex-encoded UltraHonk proof bytes for the contract. The generated ZK verifier currently compiles but is about 27.7 KB deployed bytecode, above the EVM 24 KB contract-size limit, so it cannot be deployed to World Chain as a single verifier contract. A split/optimized verifier or recursive wrapper is required before this replaces the backend-attested demo deployment.
+
 Spend nullifier checks are enforced before ledger mutation and backed by either the SQLite primary key or, in `LEDGER_MODE=onchain`, the registry contract:
 
 - old commitment must belong to the spending user,
@@ -425,9 +427,9 @@ Spend nullifier checks are enforced before ledger mutation and backed by either 
 - `registerHuman(uint256 worldNullifierHash)`
 - `issueCredit(bytes32 commitment, uint256 amount)`
 - `spend(bytes32 oldNullifier, bytes32 newCommitment, address merchant, uint256 amount, bytes proof, bytes worldProofOrBackendAttestation)`
-- `spendPrivateCredits(bytes32 oldCommitment, bytes32 oldNullifier, bytes32 newCommitment, bytes32 policyId, bytes32 invoiceNonce, address merchant, uint256 amount, bytes proof, bytes backendAttestation)`
+- `spendPrivateCredits(bytes32 oldCommitment, bytes32 oldNullifier, bytes32 newCommitment, bytes32 assetId, bytes32 policyId, bytes32 merchantId, bytes32 invoiceNonce, uint256 expiresAt, uint256 currentTimeOrBlockTime, address merchant, uint256 amount, bytes proof)`
 
-For the MVP, spend accepts a backend signer attestation instead of performing onchain recursive proof verification. This is explicitly a hackathon trust assumption.
+For the deployed MVP, spend accepts a backend signer attestation instead of performing onchain recursive proof verification. The repository also includes experimental direct verifier wiring, but the generated single-contract UltraHonk verifier is currently too large for EVM deployment.
 
 ## Limitations
 

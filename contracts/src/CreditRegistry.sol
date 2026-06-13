@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.27;
+
+interface ICreditSpendVerifier {
+    function verify(bytes calldata proof, bytes32[] calldata publicInputs) external view returns (bool);
+}
 
 contract CreditRegistry {
     address public immutable backendAttester;
+    address public immutable creditSpendVerifier;
 
     struct MerchantSettlement {
         bytes32 oldNullifier;
@@ -27,8 +32,9 @@ contract CreditRegistry {
     event MerchantApproved(bytes32 indexed policyId, address indexed merchant, bool approved);
     event PolicyRootSet(bytes32 indexed policyId, bytes32 root);
 
-    constructor(address attester) {
+    constructor(address attester, address verifier) {
         backendAttester = attester;
+        creditSpendVerifier = verifier;
     }
 
     function registerHuman(uint256 worldNullifierHash) external {
@@ -84,25 +90,48 @@ contract CreditRegistry {
         bytes32 oldCommitment,
         bytes32 oldNullifier,
         bytes32 newCommitment,
+        bytes32 assetId,
         bytes32 policyId,
+        bytes32 merchantId,
         bytes32 invoiceNonce,
+        uint256 expiresAt,
+        uint256 currentTimeOrBlockTime,
         address merchant,
         uint256 amount,
-        bytes calldata proof,
-        bytes calldata backendAttestation
+        bytes calldata proof
     ) external {
         require(oldCommitment != bytes32(0), "old commitment");
         require(oldNullifier != bytes32(0), "nullifier");
         require(newCommitment != bytes32(0), "new commitment");
+        require(assetId != bytes32(0), "asset");
         require(policyId != bytes32(0), "policy");
+        require(merchantId != bytes32(0), "merchant id");
         require(invoiceNonce != bytes32(0), "invoice");
         require(amount > 0, "amount");
+        require(creditSpendVerifier != address(0), "verifier");
+        require(block.timestamp <= expiresAt, "invoice expired");
+        require(currentTimeOrBlockTime <= expiresAt, "proof expired");
         require(commitments[oldCommitment], "unknown old commitment");
         require(!spentNullifiers[oldNullifier], "spent");
         require(!commitments[newCommitment], "commitment exists");
         require(approvedMerchants[policyId][merchant], "merchant");
         require(merchantSettlements[invoiceNonce].settledAt == 0, "invoice settled");
-        require(_hasPrivateCreditAttestation(oldCommitment, oldNullifier, newCommitment, policyId, invoiceNonce, merchant, amount, proof, backendAttestation), "attestation");
+        require(
+            _verifyPrivateCreditProof(
+                oldCommitment,
+                oldNullifier,
+                newCommitment,
+                assetId,
+                policyId,
+                merchantId,
+                invoiceNonce,
+                expiresAt,
+                currentTimeOrBlockTime,
+                amount,
+                proof
+            ),
+            "proof"
+        );
 
         spentNullifiers[oldNullifier] = true;
         commitments[newCommitment] = true;
@@ -131,33 +160,31 @@ contract CreditRegistry {
         return _recover(ethHash, signature) == backendAttester;
     }
 
-    function _hasPrivateCreditAttestation(
+    function _verifyPrivateCreditProof(
         bytes32 oldCommitment,
         bytes32 oldNullifier,
         bytes32 newCommitment,
+        bytes32 assetId,
         bytes32 policyId,
+        bytes32 merchantId,
         bytes32 invoiceNonce,
-        address merchant,
+        uint256 expiresAt,
+        uint256 currentTimeOrBlockTime,
         uint256 amount,
-        bytes calldata proof,
-        bytes calldata signature
+        bytes calldata proof
     ) internal view returns (bool) {
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                address(this),
-                block.chainid,
-                oldCommitment,
-                oldNullifier,
-                newCommitment,
-                policyId,
-                invoiceNonce,
-                merchant,
-                amount,
-                keccak256(proof)
-            )
-        );
-        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", digest));
-        return _recover(ethHash, signature) == backendAttester;
+        bytes32[] memory publicInputs = new bytes32[](10);
+        publicInputs[0] = oldCommitment;
+        publicInputs[1] = oldNullifier;
+        publicInputs[2] = newCommitment;
+        publicInputs[3] = assetId;
+        publicInputs[4] = policyId;
+        publicInputs[5] = merchantId;
+        publicInputs[6] = bytes32(uint256(amount));
+        publicInputs[7] = invoiceNonce;
+        publicInputs[8] = bytes32(uint256(expiresAt));
+        publicInputs[9] = bytes32(uint256(currentTimeOrBlockTime));
+        return ICreditSpendVerifier(creditSpendVerifier).verify(proof, publicInputs);
     }
 
     function _recover(bytes32 digest, bytes calldata signature) internal pure returns (address) {

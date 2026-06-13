@@ -32,7 +32,8 @@ if (address && account.address.toLowerCase() !== address.toLowerCase()) {
   throw new Error(`ADDRESS ${address} does not match signer ${account.address}.`);
 }
 
-const artifact = JSON.parse(readFileSync(resolve(repoRoot, "contracts/out/CreditRegistry.sol/CreditRegistry.json"), "utf8"));
+const registryArtifact = JSON.parse(readFileSync(resolve(repoRoot, "contracts/out/CreditRegistry.sol/CreditRegistry.json"), "utf8"));
+const verifierArtifact = JSON.parse(readFileSync(resolve(repoRoot, "contracts/out/CreditSpendVerifier.sol/HonkVerifier.json"), "utf8"));
 const transport = http(rpcUrl);
 const publicClient = createPublicClient({ transport });
 const walletClient = createWalletClient({ account, transport });
@@ -40,15 +41,42 @@ const chainId = await publicClient.getChainId();
 const balance = await publicClient.getBalance({ address: account.address });
 if (balance === 0n) throw new Error(`${account.address} has no ETH on chain ${chainId}.`);
 
+let verifierAddress = process.env.CREDIT_SPEND_VERIFIER_ADDRESS;
+if (verifierAddress) {
+  console.log(`Using existing HonkVerifier: ${verifierAddress}`);
+} else {
+  const verifierSize = deployedSize(verifierArtifact);
+  if (verifierSize > 24_576) {
+    throw new Error(
+      `Generated HonkVerifier is ${verifierSize} bytes, above the EVM 24,576 byte deployed-code limit. ` +
+        "Use a split/optimized verifier and set CREDIT_SPEND_VERIFIER_ADDRESS before deploying CreditRegistry."
+    );
+  }
+
+  console.log(`Deploying HonkVerifier from ${account.address} on chain ${chainId}.`);
+  const verifierHash = await walletClient.deployContract({
+    account,
+    chain: null,
+    abi: verifierArtifact.abi,
+    bytecode: verifierArtifact.bytecode.object,
+    args: []
+  });
+  console.log(`Verifier deployment transaction: ${verifierHash}`);
+  const verifierReceipt = await publicClient.waitForTransactionReceipt({ hash: verifierHash });
+  if (!verifierReceipt.contractAddress) throw new Error("Verifier deployment receipt did not include a contract address.");
+  verifierAddress = verifierReceipt.contractAddress;
+  console.log(`HonkVerifier deployed: ${verifierAddress}`);
+}
+
 console.log(`Deploying CreditRegistry from ${account.address} on chain ${chainId}.`);
 const hash = await walletClient.deployContract({
   account,
   chain: null,
-  abi: artifact.abi,
-  bytecode: artifact.bytecode.object,
-  args: [account.address]
+  abi: registryArtifact.abi,
+  bytecode: registryArtifact.bytecode.object,
+  args: [account.address, verifierAddress]
 });
-console.log(`Deployment transaction: ${hash}`);
+console.log(`Registry deployment transaction: ${hash}`);
 const receipt = await publicClient.waitForTransactionReceipt({ hash });
 if (!receipt.contractAddress) throw new Error("Deployment receipt did not include a contract address.");
 console.log(`CreditRegistry deployed: ${receipt.contractAddress}`);
@@ -73,6 +101,7 @@ if (process.argv.includes("--write-env")) {
   upsertEnv(envPath, {
     LEDGER_MODE: "onchain",
     RPC_URL: rpcUrl,
+    CREDIT_SPEND_VERIFIER_ADDRESS: verifierAddress,
     CREDIT_REGISTRY_ADDRESS: receipt.contractAddress,
     ADDRESS: account.address
   });
@@ -126,4 +155,8 @@ function unquote(value) {
 function bytes32(value) {
   const bigint = BigInt(value);
   return `0x${bigint.toString(16).padStart(64, "0")}`;
+}
+
+function deployedSize(artifact) {
+  return artifact.deployedBytecode.object.replace(/^0x/, "").length / 2;
 }

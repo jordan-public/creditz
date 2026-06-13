@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 .DS_Store
+.toolhome
 node_modules
 .next
 out
