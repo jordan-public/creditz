@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { apiFetch } from "@/lib/api-client";
-import { makeCircuitCommitment, randomNoteField, saveLocalNote, shortNoteId } from "@/lib/client-note";
+import { loadLocalNote, makeCircuitCommitment, randomNoteField, saveLocalNote, shortNoteId } from "@/lib/client-note";
 
 export default function IssuerPage() {
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("25000000");
   const [policyId, setPolicyId] = useState("campus-cafeteria-v1");
+  const [replaceNote, setReplaceNote] = useState(false);
   const [status, setStatus] = useState("Load 25 Credits for the registered local user.");
 
   useEffect(() => {
@@ -16,10 +17,28 @@ export default function IssuerPage() {
   }, []);
 
   async function reload() {
-    const ownerSecret = randomNoteField();
-    const nonce = randomNoteField();
     const asset = "Credits";
-    const commitment = makeCircuitCommitment(ownerSecret, asset, amount, policyId, nonce);
+    const existingNote = replaceNote ? null : loadLocalNote();
+    let parsedAmount = 0n;
+    try {
+      parsedAmount = BigInt(amount || "0");
+    } catch {
+      setStatus("Enter a valid Credits amount in minor units.");
+      return;
+    }
+    if (parsedAmount <= 0n) {
+      setStatus("Enter a positive Credits amount.");
+      return;
+    }
+    if (existingNote && (existingNote.asset !== asset || existingNote.policyId !== policyId)) {
+      setStatus("Existing local note uses a different asset or policy. Replace it or choose the matching policy.");
+      return;
+    }
+
+    const ownerSecret = existingNote?.ownerSecret ?? randomNoteField();
+    const nonce = randomNoteField();
+    const nextBalance = existingNote ? (BigInt(existingNote.balance) + parsedAmount).toString() : amount;
+    const commitment = makeCircuitCommitment(ownerSecret, asset, nextBalance, policyId, nonce);
     const response = await apiFetch("/api/reload", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -30,8 +49,12 @@ export default function IssuerPage() {
       setStatus(body.error ?? "Reload failed.");
       return;
     }
-    saveLocalNote({ ownerSecret, balance: amount, nonce, commitment, asset, policyId, proofMode: "provekit" });
-    setStatus(`Created private note ${shortNoteId(commitment)} and stored the secret only in this browser.`);
+    saveLocalNote({ ownerSecret, balance: nextBalance, nonce, commitment, asset, policyId, proofMode: "provekit" });
+    setStatus(
+      existingNote
+        ? `Added ${amount} minor units. New private balance is stored only in this browser as note ${shortNoteId(commitment)}.`
+        : `Created private note ${shortNoteId(commitment)} and stored the secret only in this browser.`
+    );
   }
 
   return (
@@ -52,6 +75,10 @@ export default function IssuerPage() {
           <select value={policyId} onChange={(event) => setPolicyId(event.target.value)}>
             <option value="campus-cafeteria-v1">campus-cafeteria-v1</option>
           </select>
+        </label>
+        <label className="check-row">
+          <input type="checkbox" checked={replaceNote} onChange={(event) => setReplaceNote(event.target.checked)} />
+          Replace existing local note instead of adding to it
         </label>
         <button className="primary" type="button" onClick={reload}>
           Reload credits
