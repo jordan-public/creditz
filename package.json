@@ -10,6 +10,7 @@
     "build:pages": "node scripts/build-pages.mjs",
     "lint": "pnpm --filter @creditz/web lint",
     "test": "pnpm --filter @creditz/web test",
+    "test:provekit-cycle": "pnpm --dir apps/web exec vitest src/app/api/provekit-cycle.test.ts --run",
     "test:contracts": "forge test --root contracts",
     "check:circuit": "cd circuits/credit_spend && nargo check",
     "proof:demo": "node server/src/provekit-demo.mjs"

@@ -385,6 +385,19 @@ pnpm proof:demo
 
 The `zk-proof` branch tightens `mode=provekit`: the backend requires a proof envelope with scheme `provekit-noir-credit-spend-v1`, circuit `credit_spend`, and a `public_inputs_hash` that matches the submitted spend statement. Set `PROVEKIT_VERIFY_BIN` to an external verifier executable to make the API call a real ProveKit verifier before accepting the spend. Without that verifier, ProveKit mode is rejected instead of accepting a placeholder proof.
 
+To test the complete proof, verification, and nullification cycle with a real ProveKit proof, build the ProveKit CLI from the upstream `v1` branch, prepare keys for `circuits/credit_spend`, generate a proof from `circuits/credit_spend/Prover.toml.example`, and point the opt-in test at those artifacts:
+
+```bash
+PROVEKIT_VERIFY_BIN=node \
+PROVEKIT_VERIFY_ARGS=/absolute/path/to/creditz/scripts/provekit-verify.mjs \
+PROVEKIT_CLI=/absolute/path/to/provekit-cli \
+PROVEKIT_VERIFIER_KEY=/absolute/path/to/credit_spend.pkv \
+PROVEKIT_PROOF_PATH=/absolute/path/to/credit_spend.proof.np \
+pnpm test:provekit-cycle
+```
+
+That test submits the proof through `/api/spend`, checks that the new commitment is recorded, clears only the invoice paid marker, then confirms replay of the same proof fails because the old nullifier is already spent.
+
 Spend nullifier checks are enforced before ledger mutation and backed by a DB primary key:
 
 - old commitment must belong to the spending user,
