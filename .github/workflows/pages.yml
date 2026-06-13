@@ -36,6 +36,8 @@ jobs:
           NEXT_PUBLIC_WORLD_ACTION_SPEND: creditz-spend-v1
         run: pnpm build:pages
       - name: Publish gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd apps/web/out
           touch .nojekyll
