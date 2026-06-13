@@ -290,3 +290,72 @@ git clone git@github.com:jordan-public/creditz.git
 cd creditz
 ```
 
+## Current MVP
+
+This repository now contains a runnable hackathon scaffold:
+
+- `apps/web`: Next.js World Mini App with `/`, `/register`, `/issuer`, `/merchant`, `/spend`, and `/debug`.
+- `apps/web/src/app/api`: server-side registration, reload, invoice, spend, World ID verification, and debug endpoints.
+- `circuits/credit_spend`: Noir circuit target for the private balance transition.
+- `contracts`: Foundry contract skeleton for commitments, nullifiers, and backend-attested spends.
+- `docs/architecture.md`: architecture and MVP trust assumptions.
+
+The local demo defaults to `NEXT_PUBLIC_DEMO_MODE=true`. That lets judges click through the flow before World Developer Portal credentials are configured. To require real World ID, set `NEXT_PUBLIC_WORLD_APP_ID`, keep the IDKit proof JSON intact, and set `NEXT_PUBLIC_DEMO_MODE=false`.
+
+## Setup
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:3000`.
+
+For mobile Mini App testing, expose the Next.js dev server through ngrok, zrok, or tunnelmole, then configure that public URL in the World Developer Portal and open it in World App.
+
+## Demo Script
+
+1. Go to `/register`, generate a deposit key, and verify/register with World ID or demo mode.
+2. Go to `/issuer` and reload `25000000` minor units of USDC.
+3. Go to `/merchant` and create a `6500000` minor-unit Campus Cafe QR invoice.
+4. Copy the invoice payload into `/spend`, verify the human spend, and pay.
+5. Open `/debug` to see the old nullifier spent, the invoice marked paid, and a new commitment created.
+6. Submit the same invoice again and confirm replay fails.
+
+## Proof Status
+
+The Next.js demo currently uses `demo-keccak` commitments so the UX works end to end in a browser. The Noir target in `circuits/credit_spend` expresses the intended statement:
+
+- old commitment is valid,
+- old nullifier is derived from the old nonce,
+- old balance is sufficient,
+- new commitment deducts the amount,
+- merchant and policy are allowed,
+- invoice has not expired.
+
+Run:
+
+```bash
+pnpm proof:demo
+```
+
+Then follow the official ProveKit docs to compile the Noir circuit to R1CS, generate a proof, and wire `mode=provekit` to service verification.
+
+## Contracts
+
+`contracts/src/CreditRegistry.sol` implements the required entry points:
+
+- `registerHuman(uint256 worldNullifierHash)`
+- `depositCredit(bytes32 commitment, uint256 amount, address asset)`
+- `spend(bytes32 oldNullifier, bytes32 newCommitment, address merchant, uint256 amount, bytes proof, bytes worldProofOrBackendAttestation)`
+
+For the MVP, spend accepts a backend signer attestation instead of performing onchain recursive proof verification. This is explicitly a hackathon trust assumption.
+
+## Limitations
+
+- Local demo mode is not real World ID. Disable it for portal-backed testing.
+- Local note secrets are stored in browser local storage for demo speed.
+- The Noir circuit uses a simple placeholder hash; replace it with a SNARK-friendly hash before production.
+- Onchain proof verification is represented by backend attestation in the Solidity skeleton.
+- Merchant authentication is a seeded allowlist plus short-lived invoice nonces.

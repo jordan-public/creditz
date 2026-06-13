@@ -1,0 +1,15 @@
+{
+  "name": "creditz",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --filter @creditz/web dev",
+    "build": "pnpm --filter @creditz/web build",
+    "lint": "pnpm --filter @creditz/web lint",
+    "test": "pnpm --filter @creditz/web test",
+    "proof:demo": "node server/src/provekit-demo.mjs"
+  },
+  "workspaces": [
+    "apps/*"
+  ]
+}
