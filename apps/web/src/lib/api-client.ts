@@ -7,5 +7,7 @@ export function apiUrl(path: string) {
 }
 
 export async function apiFetch(path: string, init?: RequestInit) {
-  return fetch(apiUrl(path), init);
+  const headers = new Headers(init?.headers);
+  headers.set("bypass-tunnel-reminder", "true");
+  return fetch(apiUrl(path), { ...init, headers });
 }

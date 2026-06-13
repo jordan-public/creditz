@@ -6,7 +6,7 @@ function corsHeaders() {
   return {
     "access-control-allow-origin": allowedOrigin,
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type"
+    "access-control-allow-headers": "content-type,bypass-tunnel-reminder"
   };
 }
 
