@@ -28,7 +28,7 @@ jobs:
       - name: Build static Mini App shell
         env:
           NEXT_PUBLIC_BASE_PATH: /creditz
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.PAGES_API_BASE_URL || 'https://salty-onions-leave.loca.lt' }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.PAGES_API_BASE_URL || 'https://mrjtfd-ip-98-113-54-218.tunnelmole.net' }}
           NEXT_PUBLIC_APP_URL: https://jordan-public.github.io/creditz
           NEXT_PUBLIC_DEMO_MODE: "true"
           NEXT_PUBLIC_WORLD_APP_ID: ${{ vars.NEXT_PUBLIC_WORLD_APP_ID }}
