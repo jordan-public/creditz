@@ -6,6 +6,8 @@ This folder is for demo assets, recording notes, and the final video.
 
 Use the QR/App ID artifact at:
 
+![Creditz World Mini App QR code, App ID, and URL](../AppID.png)
+
 ```text
 ../AppID.png
 ```
