@@ -20,6 +20,7 @@ export default function SpendPage() {
   const [userId, setUserId] = useState("");
   const [rawInvoice, setRawInvoice] = useState("");
   const [status, setStatus] = useState("Paste the merchant QR payload, then approve the World ID spend.");
+  const [balanceStatus, setBalanceStatus] = useState("Balance is stored only in this browser.");
   const invoice = useMemo(() => {
     try {
       return rawInvoice ? (JSON.parse(rawInvoice) as Invoice) : null;
@@ -31,6 +32,20 @@ export default function SpendPage() {
   useEffect(() => {
     setUserId(window.localStorage.getItem("creditz.user-id") ?? "");
   }, []);
+
+  function showBalance() {
+    const note = loadLocalNote();
+    if (!note) {
+      setBalanceStatus("No private note found in this browser.");
+      return;
+    }
+
+    const major = BigInt(note.balance) / 1_000_000n;
+    const minor = BigInt(note.balance) % 1_000_000n;
+    setBalanceStatus(
+      `${major}.${minor.toString().padStart(6, "0")} ${note.asset} available locally. Commitment ${shortNoteId(note.commitment)}.`
+    );
+  }
 
   async function submitSpend(worldProof: unknown) {
     const note = loadLocalNote();
@@ -104,6 +119,12 @@ export default function SpendPage() {
             Invoice for {invoice.amount} {invoice.asset} at {invoice.merchant_id}, expires {new Date(invoice.expires_at * 1000).toLocaleTimeString()}.
           </div>
         )}
+        <div className="inline-actions">
+          <button type="button" onClick={showBalance}>
+            Balance
+          </button>
+          <div className="status local-balance">{balanceStatus}</div>
+        </div>
         <WorldIdButton
           action={process.env.NEXT_PUBLIC_WORLD_ACTION_SPEND ?? "creditz-spend-v1"}
           signal={invoice?.invoice_nonce ?? ""}

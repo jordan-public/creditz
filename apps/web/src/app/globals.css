@@ -168,6 +168,13 @@ button.danger {
   margin-top: 24px;
 }
 
+.inline-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -235,6 +242,11 @@ textarea {
   background: #ecfdf5;
 }
 
+.status.local-balance {
+  min-height: 40px;
+  overflow-wrap: anywhere;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -287,5 +299,9 @@ code {
 
   .hero-visual {
     min-height: 320px;
+  }
+
+  .inline-actions {
+    grid-template-columns: 1fr;
   }
 }
