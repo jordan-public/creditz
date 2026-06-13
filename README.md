@@ -385,6 +385,8 @@ pnpm proof:demo
 
 The `zk-proof` branch tightens `mode=provekit`: the backend requires a proof envelope with scheme `provekit-noir-credit-spend-v1`, circuit `credit_spend`, and a `public_inputs_hash` that matches the submitted spend statement. Set `PROVEKIT_VERIFY_BIN` to an external verifier executable to make the API call a real ProveKit verifier before accepting the spend. Without that verifier, ProveKit mode is rejected instead of accepting a placeholder proof.
 
+The `on-chain` branch introduces `LEDGER_MODE=onchain`. With that mode enabled, the backend verifies World ID and ProveKit proofs, then records commitments, spent nullifiers, issuer deposits, and merchant settlement records through `CreditRegistry.sol`. SQLite remains as the hackathon user/invoice/debug index until an event indexer is added.
+
 To test the complete proof, verification, and nullification cycle with a real ProveKit proof, build the ProveKit CLI from the upstream `v1` branch, prepare keys for `circuits/credit_spend`, generate a proof from `circuits/credit_spend/Prover.toml.example`, and point the opt-in test at those artifacts:
 
 ```bash

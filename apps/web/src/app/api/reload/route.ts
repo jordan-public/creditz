@@ -1,5 +1,6 @@
-import { get, run } from "@/lib/server/db";
+import { get } from "@/lib/server/db";
 import { json, options } from "@/lib/server/http";
+import { recordReload } from "@/lib/server/ledger";
 
 export const OPTIONS = options;
 
@@ -22,17 +23,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    run(
-      `insert into commitments(commitment, user_id, asset, policy_id, created_at)
-       values (@commitment, @user_id, @asset, @policy_id, @created_at)`,
-      {
-        commitment: body.commitment,
-        user_id: body.userId,
-        asset: body.asset ?? "Credits",
-        policy_id: body.policyId ?? "campus-cafeteria-v1",
-        created_at: new Date().toISOString()
-      }
-    );
+    await recordReload({
+      commitment: body.commitment,
+      userId: body.userId,
+      amount: body.amount,
+      asset: body.asset ?? "Credits",
+      policyId: body.policyId ?? "campus-cafeteria-v1"
+    });
   } catch (error) {
     return json({ ok: false, error: String(error) }, { status: 409 });
   }
