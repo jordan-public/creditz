@@ -11,6 +11,14 @@ export type ProveKitStatement = {
   current_time_or_block_time: number;
 };
 
-export function buildVerifierInput(statement: ProveKitStatement, proof: string) {
+export type ProveKitProofEnvelope = {
+  scheme: "provekit-noir-credit-spend-v1";
+  circuit: "credit_spend";
+  public_inputs_hash: string;
+  proof: string;
+  verification_key_hash?: string;
+};
+
+export function buildVerifierInput(statement: ProveKitStatement, proof: ProveKitProofEnvelope) {
   return { statement, proof };
 }

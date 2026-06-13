@@ -383,7 +383,14 @@ Run:
 pnpm proof:demo
 ```
 
-Then follow the official ProveKit docs to compile the Noir circuit to R1CS, generate a proof, and wire `mode=provekit` to service verification.
+The `zk-proof` branch tightens `mode=provekit`: the backend requires a proof envelope with scheme `provekit-noir-credit-spend-v1`, circuit `credit_spend`, and a `public_inputs_hash` that matches the submitted spend statement. Set `PROVEKIT_VERIFY_BIN` to an external verifier executable to make the API call a real ProveKit verifier before accepting the spend. Without that verifier, ProveKit mode is rejected instead of accepting a placeholder proof.
+
+Spend nullifier checks are enforced before ledger mutation and backed by a DB primary key:
+
+- old commitment must belong to the spending user,
+- old nullifier must not already be spent,
+- new commitment must not already exist,
+- invoice amount, merchant, asset, policy, and expiry must match the proof statement.
 
 ## Contracts
 

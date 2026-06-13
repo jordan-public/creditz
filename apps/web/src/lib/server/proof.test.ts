@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verifySpendProof, type SpendProof } from "./proof";
+import { publicInputsHash, verifySpendProof, type SpendProof } from "./proof";
 
 const baseProof: SpendProof = {
   mode: "demo-keccak",
@@ -16,19 +16,63 @@ const baseProof: SpendProof = {
 };
 
 describe("verifySpendProof", () => {
-  it("accepts a well-formed demo statement", () => {
-    expect(verifySpendProof(baseProof)).toBe(true);
+  it("accepts a well-formed demo statement", async () => {
+    await expect(verifySpendProof(baseProof)).resolves.toEqual({ ok: true });
   });
 
-  it("rejects zero amount, malformed nullifier, reused commitment, and expired statement", () => {
-    expect(verifySpendProof({ ...baseProof, amount: "0" })).toBe(false);
-    expect(verifySpendProof({ ...baseProof, old_nullifier: "0xabc" })).toBe(false);
-    expect(verifySpendProof({ ...baseProof, new_commitment: baseProof.old_commitment })).toBe(false);
-    expect(verifySpendProof({ ...baseProof, current_time_or_block_time: 201 })).toBe(false);
+  it("rejects zero amount, malformed nullifier, reused commitment, and expired statement", async () => {
+    await expect(verifySpendProof({ ...baseProof, amount: "0" })).resolves.toMatchObject({ ok: false });
+    await expect(verifySpendProof({ ...baseProof, old_nullifier: "0xabc" })).resolves.toMatchObject({ ok: false });
+    await expect(verifySpendProof({ ...baseProof, new_commitment: baseProof.old_commitment })).resolves.toMatchObject({
+      ok: false
+    });
+    await expect(verifySpendProof({ ...baseProof, current_time_or_block_time: 201 })).resolves.toMatchObject({
+      ok: false
+    });
   });
 
-  it("requires a proof blob in ProveKit mode", () => {
-    expect(verifySpendProof({ ...baseProof, mode: "provekit", proof: undefined })).toBe(false);
-    expect(verifySpendProof({ ...baseProof, mode: "provekit", proof: "0xproof" })).toBe(true);
+  it("requires a bound ProveKit proof envelope", async () => {
+    await expect(verifySpendProof({ ...baseProof, mode: "provekit", proof: undefined })).resolves.toMatchObject({
+      ok: false,
+      error: "Missing ProveKit proof envelope."
+    });
+    await expect(verifySpendProof({ ...baseProof, mode: "provekit", proof: "0xproof" })).resolves.toMatchObject({
+      ok: false,
+      error: "Missing ProveKit proof envelope."
+    });
+
+    await expect(
+      verifySpendProof({
+        ...baseProof,
+        mode: "provekit",
+        proof: {
+          scheme: "provekit-noir-credit-spend-v1",
+          circuit: "credit_spend",
+          public_inputs_hash: publicInputsHash({ ...baseProof, amount: "1000000" }),
+          proof: "0xproof"
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: "ProveKit proof is not bound to these public inputs."
+    });
+  });
+
+  it("requires an external ProveKit verifier for bound proof envelopes", async () => {
+    await expect(
+      verifySpendProof({
+        ...baseProof,
+        mode: "provekit",
+        proof: {
+          scheme: "provekit-noir-credit-spend-v1",
+          circuit: "credit_spend",
+          public_inputs_hash: publicInputsHash(baseProof),
+          proof: "0xproof"
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: "PROVEKIT_VERIFY_BIN is required for provekit proof verification."
+    });
   });
 });

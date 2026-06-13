@@ -31,8 +31,12 @@ export async function POST(request: Request) {
     return json({ ok: false, error: world.error ?? "World ID spend proof required." }, { status: 401 });
   }
 
-  if (!verifySpendProof(proof)) {
-    return json({ ok: false, error: "Private balance-transition proof is invalid." }, { status: 400 });
+  const proofVerification = await verifySpendProof(proof);
+  if (!proofVerification.ok) {
+    return json(
+      { ok: false, error: proofVerification.error ?? "Private balance-transition proof is invalid." },
+      { status: 400 }
+    );
   }
 
   try {
@@ -65,10 +69,21 @@ export async function POST(request: Request) {
       );
       if (!merchant) throw new Error("Merchant is not approved for this policy.");
 
-      const commitment = get("select commitment from commitments where commitment = @commitment", {
-        commitment: proof.old_commitment
+      const spentNullifier = get("select nullifier from spent_nullifiers where nullifier = @nullifier", {
+        nullifier: proof.old_nullifier
       });
-      if (!commitment) throw new Error("Old commitment is not known.");
+      if (spentNullifier) throw new Error("Nullifier has already been spent.");
+
+      const oldCommitment = get("select commitment from commitments where commitment = @commitment and user_id = @user_id", {
+        commitment: proof.old_commitment,
+        user_id: userId
+      });
+      if (!oldCommitment) throw new Error("Old commitment is not known for this user.");
+
+      const newCommitment = get("select commitment from commitments where commitment = @commitment", {
+        commitment: proof.new_commitment
+      });
+      if (newCommitment) throw new Error("New commitment already exists.");
 
       run(
         `insert into spent_nullifiers(nullifier, invoice_nonce, spent_at)

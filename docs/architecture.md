@@ -13,9 +13,21 @@ The local app defaults to `NEXT_PUBLIC_DEMO_MODE=true`. In that mode, World ID p
 The spend flow has two proof modes:
 
 - `demo-keccak`: browser computes note commitments and nullifiers with keccak for the UX demo.
-- `provekit`: backend requires a proof blob and is prepared for service verification.
+- `provekit`: backend requires a structured proof envelope bound to the public inputs hash, then invokes an external verifier configured with `PROVEKIT_VERIFY_BIN`.
 
-The Noir circuit documents the intended public/private statement and should be wired to a real ProveKit verifier before production use.
+The Noir circuit documents the intended public/private statement. In this branch the API no longer treats an arbitrary proof blob as valid: ProveKit mode requires the envelope scheme `provekit-noir-credit-spend-v1`, circuit `credit_spend`, a matching public-input hash, and a successful external verifier process.
+
+## Nullifier Checks
+
+Spend handling checks the public ledger before mutation:
+
+- invoice exists, is unpaid, and is not expired,
+- merchant, policy, asset, and amount match the invoice,
+- old commitment exists for the spending user,
+- old nullifier has not already been spent,
+- new commitment does not already exist.
+
+The database also keeps `spent_nullifiers.nullifier` as a primary key, so duplicate nullifiers are rejected even if two requests race.
 
 ## Privacy Boundary
 

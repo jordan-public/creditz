@@ -139,7 +139,7 @@ describe("Creditz API flow", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.error).toBe("Private balance-transition proof is invalid.");
+    expect(response.body.error).toBe("Private proof statement is expired.");
   });
 
   it("enforces DB-level nullifier uniqueness across separate invoices", async () => {
@@ -185,6 +185,52 @@ describe("Creditz API flow", () => {
     });
 
     expect(secondSpend.status).toBe(409);
-    expect(secondSpend.body.error).toContain("UNIQUE constraint failed: spent_nullifiers.nullifier");
+    expect(secondSpend.body.error).toBe("Nullifier has already been spent.");
+  });
+
+  it("rejects spends when the old commitment belongs to another user", async () => {
+    const owner = await loadedNote("owner-commitment");
+    const attacker = await registeredUser("attacker-other-suffix");
+    const bill = await invoice("stolen-commitment", "1000000");
+
+    const response = await call<{ error: string }>(spend, {
+      userId: attacker,
+      proof: proofFor({ seed: "stolen-commitment", oldCommitment: owner.oldCommitment, invoice: bill }),
+      worldProof: { nullifier_hash: "stolen-commitment-spend", proof: "0x0", merkle_root: "0x0" }
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe("Old commitment is not known for this user.");
+  });
+
+  it("rejects a duplicated new commitment before ledger mutation", async () => {
+    const seed = "duplicate-new-commitment";
+    const note = await loadedNote(seed);
+    const bill = await invoice(seed, "1000000");
+    const duplicate = hex(`${seed}-duplicate-new`);
+
+    run(
+      `insert into commitments(commitment, user_id, asset, policy_id, created_at)
+       values (@commitment, @user_id, @asset, @policy_id, @created_at)`,
+      {
+        commitment: duplicate,
+        user_id: note.userId,
+        asset: "USDC",
+        policy_id: "campus-cafeteria-v1",
+        created_at: new Date().toISOString()
+      }
+    );
+
+    const response = await call<{ error: string }>(spend, {
+      userId: note.userId,
+      proof: {
+        ...proofFor({ seed, oldCommitment: note.oldCommitment, invoice: bill }),
+        new_commitment: duplicate
+      },
+      worldProof: { nullifier_hash: `${seed}-spend`, proof: "0x0", merkle_root: "0x0" }
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe("New commitment already exists.");
   });
 });
