@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, encodePacked, http, keccak256, stringToHex, type Address, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
 import { bytes32 } from "@/lib/proof-ids";
 import type { SpendProof } from "./proof";
 
@@ -17,6 +17,41 @@ export const CREDIT_REGISTRY_ABI = [
     stateMutability: "view",
     inputs: [{ name: "", type: "bytes32" }],
     outputs: [{ name: "", type: "bool" }]
+  },
+  {
+    type: "function",
+    name: "registeredHumans",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }]
+  },
+  {
+    type: "function",
+    name: "registerHuman",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "worldNullifierHash", type: "uint256" }],
+    outputs: []
+  },
+  {
+    type: "function",
+    name: "approvedMerchants",
+    stateMutability: "view",
+    inputs: [
+      { name: "", type: "bytes32" },
+      { name: "", type: "address" }
+    ],
+    outputs: [{ name: "", type: "bool" }]
+  },
+  {
+    type: "function",
+    name: "approveMerchant",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "policyId", type: "bytes32" },
+      { name: "merchant", type: "address" },
+      { name: "approved", type: "bool" }
+    ],
+    outputs: []
   },
   {
     type: "function",
@@ -65,9 +100,20 @@ function normalizePrivateKey(value: string) {
   return (value.startsWith("0x") ? value : `0x${value}`) as Hex;
 }
 
+function signerAccount() {
+  const account = process.env.PRIVATE_KEY
+    ? privateKeyToAccount(normalizePrivateKey(process.env.PRIVATE_KEY))
+    : mnemonicToAccount(required("PASSPHRASE"));
+  const expectedAddress = process.env.ADDRESS;
+  if (expectedAddress && account.address.toLowerCase() !== expectedAddress.toLowerCase()) {
+    throw new Error("ADDRESS does not match the configured signer.");
+  }
+  return account;
+}
+
 function clients() {
   const transport = http(required("RPC_URL"));
-  const account = privateKeyToAccount(normalizePrivateKey(required("PRIVATE_KEY")));
+  const account = signerAccount();
   return {
     publicClient: createPublicClient({ transport }),
     walletClient: createWalletClient({ account, transport }),
@@ -80,8 +126,9 @@ function proofBytes(proof: SpendProof) {
 }
 
 async function privateCreditAttestation(proof: SpendProof, merchant: Address) {
-  const privateKey = normalizePrivateKey(process.env.BACKEND_ATTESTER_PRIVATE_KEY ?? required("PRIVATE_KEY"));
-  const account = privateKeyToAccount(privateKey);
+  const account = process.env.BACKEND_ATTESTER_PRIVATE_KEY
+    ? privateKeyToAccount(normalizePrivateKey(process.env.BACKEND_ATTESTER_PRIVATE_KEY))
+    : signerAccount();
   const { publicClient } = clients();
   const chainId = await publicClient.getChainId();
   const proofPayload = proofBytes(proof);
@@ -123,6 +170,52 @@ export async function onchainNullifierSpent(nullifier: string) {
     functionName: "spentNullifiers",
     args: [nullifier as Hex]
   });
+}
+
+export async function onchainRegisterHuman(worldNullifierHash: string) {
+  const { publicClient, walletClient, account } = clients();
+  const nullifier = BigInt(worldNullifierHash);
+  const alreadyRegistered = await publicClient.readContract({
+    address: registryAddress(),
+    abi: CREDIT_REGISTRY_ABI,
+    functionName: "registeredHumans",
+    args: [nullifier]
+  });
+  if (alreadyRegistered) return null;
+
+  const hash = await walletClient.writeContract({
+    account,
+    chain: null,
+    address: registryAddress(),
+    abi: CREDIT_REGISTRY_ABI,
+    functionName: "registerHuman",
+    args: [nullifier]
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  return hash;
+}
+
+export async function onchainEnsureMerchantApproved(policyId: string, merchant: Address) {
+  const { publicClient, walletClient, account } = clients();
+  const policy = bytes32(policyId) as Hex;
+  const alreadyApproved = await publicClient.readContract({
+    address: registryAddress(),
+    abi: CREDIT_REGISTRY_ABI,
+    functionName: "approvedMerchants",
+    args: [policy, merchant]
+  });
+  if (alreadyApproved) return null;
+
+  const hash = await walletClient.writeContract({
+    account,
+    chain: null,
+    address: registryAddress(),
+    abi: CREDIT_REGISTRY_ABI,
+    functionName: "approveMerchant",
+    args: [policy, merchant, true]
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  return hash;
 }
 
 export async function onchainIssueCredit(commitment: string, amount: string) {

@@ -21,16 +21,16 @@ The Noir circuit documents the intended public/private statement. In this branch
 
 The local demo defaults to `LEDGER_MODE=sqlite`. In that mode, commitments and spent nullifiers are written to SQLite so the Mini App can run without a chain.
 
-Set `LEDGER_MODE=onchain` to route commitment existence checks, nullifier replay checks, reload recording, and spend settlement recording through `CreditRegistry.sol`. The backend still keeps users, invoices, merchants, and a debug/index cache in SQLite because the hackathon app does not yet include an event indexer.
+Set `LEDGER_MODE=onchain` to route World ID registration, commitment existence checks, nullifier replay checks, reload recording, and spend settlement recording through `CreditRegistry.sol`. The backend still keeps users, invoices, merchants, and a debug/index cache in SQLite because the hackathon app does not yet include an event indexer.
 
 On-chain mode requires:
 
 - `RPC_URL`
-- `PRIVATE_KEY`
+- `PASSPHRASE` and `ADDRESS`, or `PRIVATE_KEY`
 - `CREDIT_REGISTRY_ADDRESS`
 - `BACKEND_ATTESTER_PRIVATE_KEY` if the attester is not the transaction sender
 
-In on-chain mode, `CreditRegistry` stores note commitments, spent nullifiers, issuer Credits issued totals, policy roots, approved merchants, and merchant settlement records keyed by invoice nonce.
+In on-chain mode, `CreditRegistry` stores registered World ID nullifiers, note commitments, spent nullifiers, issuer Credits issued totals, policy roots, approved merchants, and merchant settlement records keyed by invoice nonce.
 
 ## Nullifier Checks
 

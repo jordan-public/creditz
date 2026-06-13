@@ -13,7 +13,8 @@
     "test:provekit-cycle": "pnpm --dir apps/web exec vitest src/app/api/provekit-cycle.test.ts --run",
     "test:contracts": "forge test --root contracts",
     "check:circuit": "cd circuits/credit_spend && nargo check",
-    "proof:demo": "node server/src/provekit-demo.mjs"
+    "proof:demo": "node server/src/provekit-demo.mjs",
+    "deploy:registry": "forge build --root contracts && pnpm --dir apps/web exec node ../../scripts/deploy-credit-registry.mjs --write-env"
   },
   "workspaces": [
     "apps/*"

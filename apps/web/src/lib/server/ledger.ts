@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { get, run } from "./db";
 import type { SpendProof } from "./proof";
-import { isOnchainLedger, onchainCommitmentExists, onchainIssueCredit, onchainNullifierSpent, onchainSpendPrivateCredits } from "./onchain";
+import { isOnchainLedger, onchainCommitmentExists, onchainEnsureMerchantApproved, onchainIssueCredit, onchainNullifierSpent, onchainRegisterHuman, onchainSpendPrivateCredits } from "./onchain";
 
 export async function commitmentExists(commitment: string, userId?: string) {
   if (isOnchainLedger()) {
@@ -23,6 +23,12 @@ export async function nullifierSpent(nullifier: string) {
     return onchainNullifierSpent(nullifier);
   }
   return Boolean(get("select nullifier from spent_nullifiers where nullifier = @nullifier", { nullifier }));
+}
+
+export async function recordHumanRegistration(worldNullifierHash: string) {
+  if (isOnchainLedger()) {
+    await onchainRegisterHuman(worldNullifierHash);
+  }
 }
 
 export async function recordReload(input: {
@@ -54,6 +60,7 @@ export async function recordSpend(input: {
   merchantAddress: string;
 }) {
   if (isOnchainLedger()) {
+    await onchainEnsureMerchantApproved(input.proof.policy_id, input.merchantAddress as Address);
     await onchainSpendPrivateCredits(input.proof, input.merchantAddress as Address);
   }
 
