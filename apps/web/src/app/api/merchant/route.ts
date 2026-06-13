@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     merchant_address: merchant.merchant_address,
     amount: body.amount,
     asset: body.asset ?? "USDC",
-    invoice_nonce: randomBytes(16).toString("hex"),
+    invoice_nonce: `0x${randomBytes(16).toString("hex").padStart(64, "0")}`,
     expires_at: Math.floor(Date.now() / 1000) + (body.ttlSeconds ?? 180),
     policy_id: merchant.policy_id
   };

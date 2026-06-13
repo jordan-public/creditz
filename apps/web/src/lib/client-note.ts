@@ -1,6 +1,7 @@
 "use client";
 
 import { keccak256, stringToBytes } from "viem";
+import { circuitHash, fieldId, randomFieldDecimal } from "./proof-ids";
 
 export type LocalNote = {
   ownerSecret: string;
@@ -9,6 +10,7 @@ export type LocalNote = {
   commitment: string;
   asset: string;
   policyId: string;
+  proofMode?: "demo-keccak" | "provekit";
 };
 
 const key = "creditz.local-note.v1";
@@ -28,6 +30,10 @@ export function randomHex(bytes = 32) {
   return `0x${Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("")}`;
 }
 
+export function randomNoteField() {
+  return randomFieldDecimal(16);
+}
+
 export function hashFields(fields: Array<string | number | bigint>) {
   return keccak256(stringToBytes(fields.map(String).join("|")));
 }
@@ -38,4 +44,12 @@ export function makeCommitment(ownerSecret: string, asset: string, balance: stri
 
 export function makeNullifier(ownerSecret: string, nonce: string) {
   return hashFields([ownerSecret, nonce]);
+}
+
+export function makeCircuitCommitment(ownerSecret: string, asset: string, balance: string, policyId: string, nonce: string) {
+  return circuitHash(ownerSecret, fieldId("asset", asset), balance, fieldId("policy", policyId), nonce);
+}
+
+export function makeCircuitNullifier(ownerSecret: string, nonce: string, invoiceNonce: string) {
+  return circuitHash(ownerSecret, nonce, invoiceNonce, 0n, 0n);
 }

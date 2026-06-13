@@ -2,6 +2,7 @@ import { get, run, transaction } from "@/lib/server/db";
 import { json, options } from "@/lib/server/http";
 import { verifySpendProof, type SpendProof } from "@/lib/server/proof";
 import { verifyWorldProof } from "@/lib/server/world";
+import { equivalentField } from "@/lib/proof-ids";
 
 export const OPTIONS = options;
 
@@ -56,15 +57,15 @@ export async function POST(request: Request) {
       if (invoice.paid_at) throw new Error("Invoice has already been paid.");
       if (invoice.expires_at < Math.floor(Date.now() / 1000)) throw new Error("Invoice is expired.");
       if (invoice.amount !== proof.amount) throw new Error("Invoice amount mismatch.");
-      if (invoice.policy_id !== proof.policy_id) throw new Error("Invoice policy mismatch.");
-      if (invoice.asset !== proof.asset_id) throw new Error("Invoice asset mismatch.");
-      if (invoice.merchant_id !== proof.merchant_id) throw new Error("Invoice merchant mismatch.");
+      if (!equivalentField("policy", invoice.policy_id, proof.policy_id)) throw new Error("Invoice policy mismatch.");
+      if (!equivalentField("asset", invoice.asset, proof.asset_id)) throw new Error("Invoice asset mismatch.");
+      if (!equivalentField("merchant", invoice.merchant_id, proof.merchant_id)) throw new Error("Invoice merchant mismatch.");
 
       const merchant = get(
         "select merchant_id from merchants where merchant_id = @merchant_id and policy_id = @policy_id",
         {
-          merchant_id: proof.merchant_id,
-          policy_id: proof.policy_id
+          merchant_id: invoice.merchant_id,
+          policy_id: invoice.policy_id
         }
       );
       if (!merchant) throw new Error("Merchant is not approved for this policy.");

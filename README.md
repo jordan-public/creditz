@@ -391,12 +391,15 @@ To test the complete proof, verification, and nullification cycle with a real Pr
 PROVEKIT_VERIFY_BIN=node \
 PROVEKIT_VERIFY_ARGS=/absolute/path/to/creditz/scripts/provekit-verify.mjs \
 PROVEKIT_CLI=/absolute/path/to/provekit-cli \
+PROVEKIT_PROVER_KEY=/absolute/path/to/credit_spend.pkp \
 PROVEKIT_VERIFIER_KEY=/absolute/path/to/credit_spend.pkv \
 PROVEKIT_PROOF_PATH=/absolute/path/to/credit_spend.proof.np \
 pnpm test:provekit-cycle
 ```
 
 That test submits the proof through `/api/spend`, checks that the new commitment is recorded, clears only the invoice paid marker, then confirms replay of the same proof fails because the old nullifier is already spent.
+
+The Mini App spend screen uses the same verifier path. The issuer page creates a circuit-compatible local note, `/spend` asks `/api/provekit/prove` to generate a proof from that note and the merchant invoice, then submits the returned proof envelope to `/api/spend`. For a real phone demo, run the backend with `PROVEKIT_CLI`, `PROVEKIT_PROVER_KEY`, `PROVEKIT_VERIFIER_KEY`, `PROVEKIT_VERIFY_BIN=node`, and `PROVEKIT_VERIFY_ARGS=/absolute/path/to/scripts/provekit-verify.mjs` set. MVP limitation: proving currently happens on the backend, so the backend temporarily receives the private note witness. Verification and nullifier enforcement are real; client-side or delegated private proving is future work.
 
 Spend nullifier checks are enforced before ledger mutation and backed by a DB primary key:
 

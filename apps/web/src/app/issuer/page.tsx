@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { apiFetch } from "@/lib/api-client";
-import { makeCommitment, randomHex, saveLocalNote } from "@/lib/client-note";
+import { makeCircuitCommitment, randomNoteField, saveLocalNote } from "@/lib/client-note";
 
 export default function IssuerPage() {
   const [userId, setUserId] = useState("");
@@ -16,10 +16,10 @@ export default function IssuerPage() {
   }, []);
 
   async function reload() {
-    const ownerSecret = randomHex(32);
-    const nonce = randomHex(16);
+    const ownerSecret = randomNoteField();
+    const nonce = randomNoteField();
     const asset = "USDC";
-    const commitment = makeCommitment(ownerSecret, asset, amount, policyId, nonce);
+    const commitment = makeCircuitCommitment(ownerSecret, asset, amount, policyId, nonce);
     const response = await apiFetch("/api/reload", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -30,7 +30,7 @@ export default function IssuerPage() {
       setStatus(body.error ?? "Reload failed.");
       return;
     }
-    saveLocalNote({ ownerSecret, balance: amount, nonce, commitment, asset, policyId });
+    saveLocalNote({ ownerSecret, balance: amount, nonce, commitment, asset, policyId, proofMode: "provekit" });
     setStatus(`Created private note ${commitment.slice(0, 18)}... and stored the secret only in this browser.`);
   }
 

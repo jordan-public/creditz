@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { circuitHash, fieldId } from "@/lib/proof-ids";
 import { run } from "@/lib/server/db";
 import { publicInputsHash, type SpendProof } from "@/lib/server/proof";
+import { POST as createInvoice } from "./merchant/route";
+import { POST as register } from "./register/route";
+import { POST as reload } from "./reload/route";
+import { POST as prove } from "./provekit/prove/route";
 import { POST as spend } from "./spend/route";
 
 const required = [
   "PROVEKIT_VERIFY_BIN",
   "PROVEKIT_VERIFY_ARGS",
   "PROVEKIT_CLI",
+  "PROVEKIT_PROVER_KEY",
   "PROVEKIT_VERIFIER_KEY",
   "PROVEKIT_PROOF_PATH"
 ];
@@ -23,6 +29,14 @@ const jsonRequest = (body: unknown) =>
 
 const callSpend = async <T>(body: unknown) => {
   const response = await spend(jsonRequest(body));
+  return {
+    status: response.status,
+    body: (await response.json()) as T
+  };
+};
+
+const call = async <T>(handler: (request: Request) => Promise<Response>, body: unknown) => {
+  const response = await handler(jsonRequest(body));
   return {
     status: response.status,
     body: (await response.json()) as T
@@ -132,6 +146,76 @@ maybeDescribe("ProveKit verification and nullifier cycle", () => {
       userId,
       proof,
       worldProof: { nullifier_hash: "provekit-cycle-world-replay", proof: "0x0", merkle_root: "0x0" }
+    });
+    expect(replay.status).toBe(409);
+    expect(replay.body.error).toBe("Nullifier has already been spent.");
+  });
+
+  it("runs the Mini App proof request, spend verification, and nullifier replay path", async () => {
+    const ownerSecret = "123456789";
+    const oldBalance = "25000000";
+    const oldNonce = "987654321";
+    const newNonce = "222333444";
+    const note = {
+      ownerSecret,
+      balance: oldBalance,
+      nonce: oldNonce,
+      commitment: circuitHash(ownerSecret, fieldId("asset", "USDC"), oldBalance, fieldId("policy", "campus-cafeteria-v1"), oldNonce),
+      asset: "USDC",
+      policyId: "campus-cafeteria-v1",
+      proofMode: "provekit"
+    };
+
+    const registerResponse = await call<{ userId: string }>(register, {
+      depositPublicKey: "provekit-miniapp-deposit",
+      worldProof: { nullifier_hash: "provekit-miniapp-human", proof: "0x0", merkle_root: "0x0" }
+    });
+    expect(registerResponse, JSON.stringify(registerResponse.body)).toMatchObject({ status: 200 });
+
+    const reloadResponse = await call(reload, {
+      userId: registerResponse.body.userId,
+      commitment: note.commitment,
+      amount: oldBalance,
+      asset: note.asset,
+      policyId: note.policyId
+    });
+    expect(reloadResponse, JSON.stringify(reloadResponse.body)).toMatchObject({ status: 200 });
+
+    const invoiceResponse = await call<{ invoice: Record<string, unknown> }>(createInvoice, {
+      merchantId: "campus-cafe-1",
+      amount: "6500000",
+      asset: "USDC",
+      ttlSeconds: 180
+    });
+    expect(invoiceResponse, JSON.stringify(invoiceResponse.body)).toMatchObject({ status: 200 });
+
+    const proofResponse = await call<{ proof: SpendProof; nextNote: { commitment: string; nonce: string; balance: string } }>(
+      prove,
+      {
+        note,
+        invoice: invoiceResponse.body.invoice,
+        newNonce
+      }
+    );
+    expect(proofResponse, JSON.stringify(proofResponse.body)).toMatchObject({ status: 200 });
+    expect(proofResponse.body.proof.mode).toBe("provekit");
+    expect(proofResponse.body.nextNote.balance).toBe("18500000");
+
+    const firstSpend = await call(spend, {
+      userId: registerResponse.body.userId,
+      proof: proofResponse.body.proof,
+      worldProof: { nullifier_hash: "provekit-miniapp-spend", proof: "0x0", merkle_root: "0x0" }
+    });
+    expect(firstSpend, JSON.stringify(firstSpend.body)).toMatchObject({ status: 200 });
+
+    run("update invoices set paid_at = null where invoice_nonce = @invoice_nonce", {
+      invoice_nonce: proofResponse.body.proof.invoice_nonce
+    });
+
+    const replay = await call<{ error: string }>(spend, {
+      userId: registerResponse.body.userId,
+      proof: proofResponse.body.proof,
+      worldProof: { nullifier_hash: "provekit-miniapp-replay", proof: "0x0", merkle_root: "0x0" }
     });
     expect(replay.status).toBe(409);
     expect(replay.body.error).toBe("Nullifier has already been spent.");

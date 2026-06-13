@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { WorldIdButton } from "@/components/WorldIdButton";
 import { apiFetch } from "@/lib/api-client";
-import { loadLocalNote, makeCommitment, makeNullifier, randomHex, saveLocalNote } from "@/lib/client-note";
+import { loadLocalNote, randomNoteField, saveLocalNote } from "@/lib/client-note";
 
 type Invoice = {
   merchant_id: string;
@@ -50,21 +50,20 @@ export default function SpendPage() {
       return;
     }
 
-    const newBalance = (oldBalance - amount).toString();
-    const newNonce = randomHex(16);
-    const proof = {
-      mode: "demo-keccak",
-      old_commitment: note.commitment,
-      old_nullifier: makeNullifier(note.ownerSecret, note.nonce),
-      new_commitment: makeCommitment(note.ownerSecret, note.asset, newBalance, note.policyId, newNonce),
-      asset_id: invoice.asset,
-      policy_id: invoice.policy_id,
-      merchant_id: invoice.merchant_id,
-      amount: invoice.amount,
-      invoice_nonce: invoice.invoice_nonce,
-      expires_at: invoice.expires_at,
-      current_time_or_block_time: Math.floor(Date.now() / 1000)
-    };
+    const newNonce = randomNoteField();
+    setStatus("Generating ProveKit balance proof...");
+    const proofResponse = await apiFetch("/api/provekit/prove", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ note, invoice, newNonce })
+    });
+    const proofBody = await proofResponse.json();
+    if (!proofResponse.ok) {
+      setStatus(proofBody.error ?? "ProveKit proof generation failed.");
+      return;
+    }
+
+    const proof = proofBody.proof;
 
     const response = await apiFetch("/api/spend", {
       method: "POST",
@@ -77,7 +76,13 @@ export default function SpendPage() {
       return;
     }
 
-    saveLocalNote({ ...note, balance: newBalance, nonce: newNonce, commitment: proof.new_commitment });
+    saveLocalNote({
+      ...note,
+      balance: proofBody.nextNote.balance,
+      nonce: proofBody.nextNote.nonce,
+      commitment: proofBody.nextNote.commitment,
+      proofMode: "provekit"
+    });
     setStatus(`Paid ${invoice.amount} minor units. New hidden commitment ${proof.new_commitment.slice(0, 18)}...`);
   }
 
