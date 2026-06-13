@@ -312,6 +312,15 @@ pnpm dev
 
 Open `http://localhost:3000`.
 
+Useful checks:
+
+```bash
+pnpm test
+pnpm build
+pnpm test:contracts
+pnpm check:circuit
+```
+
 For mobile Mini App testing, expose the Next.js dev server through ngrok, zrok, or tunnelmole, then configure that public URL in the World Developer Portal and open it in World App.
 
 ## Demo Script

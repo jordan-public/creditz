@@ -1,8 +1,11 @@
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
+import type { SQLInputValue } from "node:sqlite";
 
 type Row = Record<string, SQLInputValue>;
+const require = createRequire(import.meta.url);
+const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
 
 const dbPath = resolve(process.cwd(), process.env.DATABASE_URL?.replace("file:", "") ?? ".data/creditz.sqlite");
 mkdirSync(dirname(dbPath), { recursive: true });

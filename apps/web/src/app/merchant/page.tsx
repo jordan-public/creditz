@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import QRCode from "qrcode";
 import { AppShell } from "@/components/AppShell";
@@ -46,7 +47,13 @@ export default function MerchantPage() {
             <textarea value={payload} readOnly />
           </label>
         </div>
-        <div className="panel qr">{qr ? <img src={qr} alt="Merchant invoice QR code" /> : <span className="muted">QR appears here.</span>}</div>
+        <div className="panel qr">
+          {qr ? (
+            <Image src={qr} alt="Merchant invoice QR code" width={300} height={300} unoptimized />
+          ) : (
+            <span className="muted">QR appears here.</span>
+          )}
+        </div>
       </section>
     </AppShell>
   );

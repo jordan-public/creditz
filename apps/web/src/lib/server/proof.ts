@@ -19,15 +19,28 @@ function hashFields(fields: Array<string | number | bigint>) {
   return keccak256(stringToBytes(fields.map(String).join("|")));
 }
 
+function isBytes32(value: string) {
+  return /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
 export function verifySpendProof(statement: SpendProof) {
+  if (BigInt(statement.amount) <= 0n) {
+    return false;
+  }
+
+  if (statement.current_time_or_block_time > statement.expires_at) {
+    return false;
+  }
+
   if (statement.mode === "provekit") {
     return Boolean(statement.proof);
   }
 
   return (
-    statement.old_nullifier.startsWith("0x") &&
-    statement.old_commitment.startsWith("0x") &&
-    statement.new_commitment.startsWith("0x") &&
+    isBytes32(statement.old_nullifier) &&
+    isBytes32(statement.old_commitment) &&
+    isBytes32(statement.new_commitment) &&
+    statement.old_commitment !== statement.new_commitment &&
     statement.invoice_nonce.length >= 16 &&
     hashFields([
       statement.old_commitment,

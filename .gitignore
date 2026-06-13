@@ -13,3 +13,4 @@ broadcast
 .data
 target
 proofs
+circuits/**/Prover.toml

@@ -7,6 +7,8 @@
     "build": "pnpm --filter @creditz/web build",
     "lint": "pnpm --filter @creditz/web lint",
     "test": "pnpm --filter @creditz/web test",
+    "test:contracts": "forge test --root contracts",
+    "check:circuit": "cd circuits/credit_spend && nargo check",
     "proof:demo": "node server/src/provekit-demo.mjs"
   },
   "workspaces": [

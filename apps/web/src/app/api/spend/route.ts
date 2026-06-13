@@ -35,8 +35,15 @@ export async function POST(request: Request) {
 
   try {
     transaction(() => {
-      const invoice = get<{ paid_at: string | null; expires_at: number; amount: string; policy_id: string; asset: string }>(
-        "select paid_at, expires_at, amount, policy_id, asset from invoices where invoice_nonce = @invoice_nonce",
+      const invoice = get<{
+        paid_at: string | null;
+        expires_at: number;
+        amount: string;
+        policy_id: string;
+        asset: string;
+        merchant_id: string;
+      }>(
+        "select paid_at, expires_at, amount, policy_id, asset, merchant_id from invoices where invoice_nonce = @invoice_nonce",
         { invoice_nonce: proof.invoice_nonce }
       );
       if (!invoice) throw new Error("Invoice does not exist.");
@@ -45,6 +52,16 @@ export async function POST(request: Request) {
       if (invoice.amount !== proof.amount) throw new Error("Invoice amount mismatch.");
       if (invoice.policy_id !== proof.policy_id) throw new Error("Invoice policy mismatch.");
       if (invoice.asset !== proof.asset_id) throw new Error("Invoice asset mismatch.");
+      if (invoice.merchant_id !== proof.merchant_id) throw new Error("Invoice merchant mismatch.");
+
+      const merchant = get(
+        "select merchant_id from merchants where merchant_id = @merchant_id and policy_id = @policy_id",
+        {
+          merchant_id: proof.merchant_id,
+          policy_id: proof.policy_id
+        }
+      );
+      if (!merchant) throw new Error("Merchant is not approved for this policy.");
 
       const commitment = get("select commitment from commitments where commitment = @commitment", {
         commitment: proof.old_commitment
