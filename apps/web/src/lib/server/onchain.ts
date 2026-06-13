@@ -20,12 +20,11 @@ export const CREDIT_REGISTRY_ABI = [
   },
   {
     type: "function",
-    name: "depositCredit",
+    name: "issueCredit",
     stateMutability: "nonpayable",
     inputs: [
       { name: "commitment", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-      { name: "asset", type: "address" }
+      { name: "amount", type: "uint256" }
     ],
     outputs: []
   },
@@ -60,10 +59,6 @@ function required(name: string) {
 
 function registryAddress() {
   return required("CREDIT_REGISTRY_ADDRESS") as Address;
-}
-
-function backingAssetAddress() {
-  return (process.env.BACKING_ASSET_ADDRESS ?? required("MOCK_USDC_ADDRESS")) as Address;
 }
 
 function normalizePrivateKey(value: string) {
@@ -130,15 +125,15 @@ export async function onchainNullifierSpent(nullifier: string) {
   });
 }
 
-export async function onchainDepositCredit(commitment: string, amount: string) {
+export async function onchainIssueCredit(commitment: string, amount: string) {
   const { publicClient, walletClient, account } = clients();
   const hash = await walletClient.writeContract({
     account,
     chain: null,
     address: registryAddress(),
     abi: CREDIT_REGISTRY_ABI,
-    functionName: "depositCredit",
-    args: [commitment as Hex, BigInt(amount), backingAssetAddress()]
+    functionName: "issueCredit",
+    args: [commitment as Hex, BigInt(amount)]
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;

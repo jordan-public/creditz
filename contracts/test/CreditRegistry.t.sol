@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {CreditRegistry} from "../src/CreditRegistry.sol";
-import {MockUSDC} from "../src/MockUSDC.sol";
 
 interface Vm {
     function addr(uint256 privateKey) external returns (address);
@@ -14,7 +13,6 @@ contract CreditRegistryTest {
 
     uint256 private constant ATTESTER_KEY = 0xA11CE;
     CreditRegistry private registry;
-    MockUSDC private usdc;
 
     struct PrivateSpendCase {
         bytes32 oldCommitment;
@@ -29,9 +27,6 @@ contract CreditRegistryTest {
 
     function setUp() public {
         registry = new CreditRegistry(vm.addr(ATTESTER_KEY));
-        usdc = new MockUSDC();
-        usdc.mint(address(this), 100e6);
-        require(usdc.approve(address(registry), type(uint256).max), "approve");
     }
 
     function testRegisterHumanRejectsDuplicateNullifier() public {
@@ -41,17 +36,13 @@ contract CreditRegistryTest {
         } catch {}
     }
 
-    function testDepositCreditTransfersAssetAndStoresCommitment() public {
+    function testIssueCreditStoresCommitmentAndIssuerTotal() public {
         bytes32 commitment = keccak256("old-note");
 
-        registry.depositCredit(commitment, 25e6, address(usdc));
+        registry.issueCredit(commitment, 25e6);
 
         require(registry.commitments(commitment), "commitment not stored");
-        require(registry.commitmentAmounts(commitment) == 25e6, "commitment amount");
-        require(registry.commitmentAssets(commitment) == address(usdc), "commitment asset");
-        require(registry.issuerDeposits(address(this), address(usdc)) == 25e6, "issuer deposit");
-        require(usdc.balanceOf(address(registry)) == 25e6, "registry balance");
-        require(usdc.balanceOf(address(this)) == 75e6, "issuer balance");
+        require(registry.issuerCreditsIssued(address(this)) == 25e6, "issuer credits");
     }
 
     function testPolicyRootCanBeRecorded() public {
@@ -98,7 +89,7 @@ contract CreditRegistryTest {
             proof: hex"9876"
         });
 
-        registry.depositCredit(spendCase.oldCommitment, 25e6, address(usdc));
+        registry.issueCredit(spendCase.oldCommitment, 25e6);
         registry.approveMerchant(spendCase.policyId, spendCase.merchant, true);
 
         _spendPrivateCredits(spendCase);
@@ -134,7 +125,7 @@ contract CreditRegistryTest {
             proof: hex"1122"
         });
 
-        registry.depositCredit(spendCase.oldCommitment, 25e6, address(usdc));
+        registry.issueCredit(spendCase.oldCommitment, 25e6);
 
         try this.trySpendPrivateCredits(spendCase) {
             revert("unapproved merchant accepted");

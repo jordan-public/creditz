@@ -28,10 +28,9 @@ On-chain mode requires:
 - `RPC_URL`
 - `PRIVATE_KEY`
 - `CREDIT_REGISTRY_ADDRESS`
-- `BACKING_ASSET_ADDRESS` or `MOCK_USDC_ADDRESS`
 - `BACKEND_ATTESTER_PRIVATE_KEY` if the attester is not the transaction sender
 
-In on-chain mode, `CreditRegistry` stores note commitments, spent nullifiers, issuer deposit totals, commitment backing metadata, policy roots, approved merchants, and merchant settlement records keyed by invoice nonce.
+In on-chain mode, `CreditRegistry` stores note commitments, spent nullifiers, issuer Credits issued totals, policy roots, approved merchants, and merchant settlement records keyed by invoice nonce.
 
 ## Nullifier Checks
 

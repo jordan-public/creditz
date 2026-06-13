@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { get, run } from "./db";
 import type { SpendProof } from "./proof";
-import { isOnchainLedger, onchainCommitmentExists, onchainDepositCredit, onchainNullifierSpent, onchainSpendPrivateCredits } from "./onchain";
+import { isOnchainLedger, onchainCommitmentExists, onchainIssueCredit, onchainNullifierSpent, onchainSpendPrivateCredits } from "./onchain";
 
 export async function commitmentExists(commitment: string, userId?: string) {
   if (isOnchainLedger()) {
@@ -33,7 +33,7 @@ export async function recordReload(input: {
   policyId: string;
 }) {
   if (isOnchainLedger()) {
-    await onchainDepositCredit(input.commitment, input.amount);
+    await onchainIssueCredit(input.commitment, input.amount);
   }
   run(
     `insert into commitments(commitment, user_id, asset, policy_id, created_at)

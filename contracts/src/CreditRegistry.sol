@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IERC20Like {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-}
-
 contract CreditRegistry {
     address public immutable backendAttester;
 
@@ -20,15 +16,13 @@ contract CreditRegistry {
     mapping(uint256 => bool) public registeredHumans;
     mapping(bytes32 => bool) public commitments;
     mapping(bytes32 => bool) public spentNullifiers;
-    mapping(bytes32 => uint256) public commitmentAmounts;
-    mapping(bytes32 => address) public commitmentAssets;
-    mapping(address => mapping(address => uint256)) public issuerDeposits;
+    mapping(address => uint256) public issuerCreditsIssued;
     mapping(bytes32 => mapping(address => bool)) public approvedMerchants;
     mapping(bytes32 => bytes32) public policyRoots;
     mapping(bytes32 => MerchantSettlement) public merchantSettlements;
 
     event HumanRegistered(address indexed account, uint256 worldNullifierHash);
-    event CreditDeposited(address indexed issuer, bytes32 indexed commitment, uint256 amount, address indexed asset);
+    event CreditIssued(address indexed issuer, bytes32 indexed commitment, uint256 amount);
     event Spent(bytes32 indexed oldNullifier, bytes32 indexed newCommitment, address indexed merchant, uint256 amount, bytes32 policyId, bytes32 invoiceNonce);
     event MerchantApproved(bytes32 indexed policyId, address indexed merchant, bool approved);
     event PolicyRootSet(bytes32 indexed policyId, bytes32 root);
@@ -57,16 +51,13 @@ contract CreditRegistry {
         emit PolicyRootSet(policyId, root);
     }
 
-    function depositCredit(bytes32 commitment, uint256 amount, address asset) external {
+    function issueCredit(bytes32 commitment, uint256 amount) external {
         require(commitment != bytes32(0), "commitment");
         require(amount > 0, "amount");
         require(!commitments[commitment], "exists");
         commitments[commitment] = true;
-        commitmentAmounts[commitment] = amount;
-        commitmentAssets[commitment] = asset;
-        issuerDeposits[msg.sender][asset] += amount;
-        require(IERC20Like(asset).transferFrom(msg.sender, address(this), amount), "transfer");
-        emit CreditDeposited(msg.sender, commitment, amount, asset);
+        issuerCreditsIssued[msg.sender] += amount;
+        emit CreditIssued(msg.sender, commitment, amount);
     }
 
     function spend(

@@ -106,7 +106,7 @@ policy_id = campus_cafeteria_policy
 recipient_commitment = H(owner_secret_or_public_deposit_key, Credits, 100, policy_id, nonce)
 ```
 
-The issuer deposits backing assets into the Creditz contract and creates a new private Credits note commitment for the recipient.
+The issuer creates a new private Credits note commitment for the recipient.
 
 For the hackathon MVP, use a simpler recipient flow:
 
@@ -218,7 +218,7 @@ Smart contracts on World Chain
   ├── CreditRegistry.sol
   ├── stores commitments and spent nullifiers
   ├── verifies proof or accepts backend attestation for MVP
-  └── settles backing assets to merchant
+  └── records merchant settlement claims denominated in Credits
 ```
 
 For a more complete onchain version, use a recursive verifier or Groth16 wrapper for the Noir proof.
@@ -266,7 +266,7 @@ Target ProveKit requirements:
 - **Arc / Dynamic / Unlink**: private Credits payments or private nanopayments.
 - **ENS**: merchant names such as `cafeteria.school.eth` and human-readable issuer identities.
 - **Ledger**: higher-risk issuer admin operations or reload approvals secured by Ledger.
-- **LI.FI / Uniswap**: reload Credits from any token and settle through the configured backing asset.
+- **LI.FI / Uniswap**: future funding rails if Credits become redeemable through external assets.
 
 ## Security considerations
 
@@ -403,7 +403,7 @@ That test submits the proof through `/api/spend`, checks that the new commitment
 
 The Mini App spend screen uses the same verifier path. The issuer page creates a circuit-compatible local note, `/spend` asks `/api/provekit/prove` to generate a proof from that note and the merchant invoice, then submits the returned proof envelope to `/api/spend`. For a real phone demo, run the backend with `PROVEKIT_CLI`, `PROVEKIT_PROVER_KEY`, `PROVEKIT_VERIFIER_KEY`, `PROVEKIT_VERIFY_BIN=node`, and `PROVEKIT_VERIFY_ARGS=/absolute/path/to/scripts/provekit-verify.mjs` set. MVP limitation: proving currently happens on the backend, so the backend temporarily receives the private note witness. Verification and nullifier enforcement are real; client-side or delegated private proving is future work.
 
-Spend nullifier checks are enforced before ledger mutation and backed by a DB primary key:
+Spend nullifier checks are enforced before ledger mutation and backed by either the SQLite primary key or, in `LEDGER_MODE=onchain`, the registry contract:
 
 - old commitment must belong to the spending user,
 - old nullifier must not already be spent,
@@ -415,8 +415,9 @@ Spend nullifier checks are enforced before ledger mutation and backed by a DB pr
 `contracts/src/CreditRegistry.sol` implements the required entry points:
 
 - `registerHuman(uint256 worldNullifierHash)`
-- `depositCredit(bytes32 commitment, uint256 amount, address asset)`
+- `issueCredit(bytes32 commitment, uint256 amount)`
 - `spend(bytes32 oldNullifier, bytes32 newCommitment, address merchant, uint256 amount, bytes proof, bytes worldProofOrBackendAttestation)`
+- `spendPrivateCredits(bytes32 oldCommitment, bytes32 oldNullifier, bytes32 newCommitment, bytes32 policyId, bytes32 invoiceNonce, address merchant, uint256 amount, bytes proof, bytes backendAttestation)`
 
 For the MVP, spend accepts a backend signer attestation instead of performing onchain recursive proof verification. This is explicitly a hackathon trust assumption.
 
