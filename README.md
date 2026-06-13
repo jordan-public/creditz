@@ -361,6 +361,8 @@ If the tunnel URL changes, update `PAGES_API_BASE_URL` and rerun the Pages workf
 
 Demo access artifact:
 
+![Creditz World Mini App QR code, App ID, and URL](AppID.png)
+
 - `AppID.png` contains the World Developer Portal App ID, the Mini App URL, and the QR code for opening Creditz in World App.
 - Use it when installing or opening the app on a phone for judging or recording.
 - Additional demo notes and video assets live under `demo/`.
