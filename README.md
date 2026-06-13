@@ -359,6 +359,12 @@ If the tunnel URL changes, update `PAGES_API_BASE_URL` and rerun the Pages workf
 
 ## Demo Script
 
+Demo access artifact:
+
+- `AppID.png` contains the World Developer Portal App ID, the Mini App URL, and the QR code for opening Creditz in World App.
+- Use it when installing or opening the app on a phone for judging or recording.
+- Additional demo notes and video assets live under `demo/`.
+
 1. Go to `/register`, generate a deposit key, and verify/register with World ID or demo mode.
 2. Go to `/issuer` and reload `25000000` minor units of Credits.
 3. Go to `/merchant` and create a `6500000` minor-unit Campus Cafe QR invoice.
