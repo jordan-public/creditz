@@ -9,7 +9,7 @@ export default function IssuerPage() {
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("25000000");
   const [policyId, setPolicyId] = useState("campus-cafeteria-v1");
-  const [status, setStatus] = useState("Load 25 USDC credits for the registered local user.");
+  const [status, setStatus] = useState("Load 25 Credits for the registered local user.");
 
   useEffect(() => {
     setUserId(window.localStorage.getItem("creditz.user-id") ?? "");
@@ -18,7 +18,7 @@ export default function IssuerPage() {
   async function reload() {
     const ownerSecret = randomNoteField();
     const nonce = randomNoteField();
-    const asset = "USDC";
+    const asset = "Credits";
     const commitment = makeCircuitCommitment(ownerSecret, asset, amount, policyId, nonce);
     const response = await apiFetch("/api/reload", {
       method: "POST",
@@ -44,7 +44,7 @@ export default function IssuerPage() {
           <input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder="usr_..." />
         </label>
         <label>
-          Amount in USDC minor units
+          Amount in Credits minor units
           <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="numeric" />
         </label>
         <label>

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       {
         commitment: body.commitment,
         user_id: body.userId,
-        asset: body.asset ?? "USDC",
+        asset: body.asset ?? "Credits",
         policy_id: body.policyId ?? "campus-cafeteria-v1",
         created_at: new Date().toISOString()
       }

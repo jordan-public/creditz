@@ -44,7 +44,7 @@ async function loadedNote(seed: string) {
     userId,
     commitment: oldCommitment,
     amount: "25000000",
-    asset: "USDC",
+    asset: "Credits",
     policyId: "campus-cafeteria-v1"
   });
 
@@ -58,7 +58,7 @@ async function invoice(seed: string, amount = "6500000") {
     {
       merchantId: "campus-cafe-1",
       amount,
-      asset: "USDC",
+      asset: "Credits",
       ttlSeconds: 180
     }
   );
@@ -164,7 +164,7 @@ describe("Creditz API flow", () => {
       {
         commitment: firstProof.new_commitment,
         user_id: note.userId,
-        asset: "USDC",
+        asset: "Credits",
         policy_id: "campus-cafeteria-v1",
         created_at: new Date().toISOString()
       }
@@ -215,7 +215,7 @@ describe("Creditz API flow", () => {
       {
         commitment: duplicate,
         user_id: note.userId,
-        asset: "USDC",
+        asset: "Credits",
         policy_id: "campus-cafeteria-v1",
         created_at: new Date().toISOString()
       }

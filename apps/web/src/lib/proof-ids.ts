@@ -3,7 +3,7 @@ const FIELD_MODULUS = 2188824287183927522224640574525727508854836440041603434369
 
 export const FIELD_IDS = {
   asset: {
-    USDC: "1001"
+    Credits: "1001"
   },
   policy: {
     "campus-cafeteria-v1": "2001"

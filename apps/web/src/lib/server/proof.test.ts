@@ -6,7 +6,7 @@ const baseProof: SpendProof = {
   old_commitment: `0x${"1".repeat(64)}`,
   old_nullifier: `0x${"2".repeat(64)}`,
   new_commitment: `0x${"3".repeat(64)}`,
-  asset_id: "USDC",
+  asset_id: "Credits",
   policy_id: "campus-cafeteria-v1",
   merchant_id: "campus-cafe-1",
   amount: "6500000",
