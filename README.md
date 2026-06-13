@@ -341,13 +341,13 @@ pnpm dev:backend:pages
 pnpm tunnel:backend
 ```
 
-3. In GitHub repo settings, enable Pages from GitHub Actions. The workflow defaults to:
+3. In GitHub repo settings, enable Pages from GitHub Actions. The workflow currently defaults to the tunnel started for this demo:
 
 ```text
-https://creditz-jordan.loca.lt
+https://two-moose-live.loca.lt
 ```
 
-You can override it by setting repository variable `PAGES_API_BASE_URL` to a different tunnel URL.
+If you restart `pnpm tunnel:backend`, localtunnel may print a new URL. Override the default by setting repository variable `PAGES_API_BASE_URL` to the new tunnel URL, or update `.github/workflows/pages.yml` and push again.
 
 4. Push to `main`. The Pages workflow builds the static frontend at:
 

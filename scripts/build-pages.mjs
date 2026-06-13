@@ -1,4 +1,4 @@
-import { existsSync, renameSync } from "node:fs";
+import { existsSync, renameSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -12,6 +12,9 @@ if (existsSync(disabledApiDir)) {
 let moved = false;
 
 try {
+  rmSync(resolve("apps/web/.next"), { recursive: true, force: true });
+  rmSync(resolve("apps/web/out"), { recursive: true, force: true });
+
   if (existsSync(apiDir)) {
     renameSync(apiDir, disabledApiDir);
     moved = true;
