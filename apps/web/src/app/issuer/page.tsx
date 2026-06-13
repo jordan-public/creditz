@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { apiFetch } from "@/lib/api-client";
-import { makeCircuitCommitment, randomNoteField, saveLocalNote } from "@/lib/client-note";
+import { makeCircuitCommitment, randomNoteField, saveLocalNote, shortNoteId } from "@/lib/client-note";
 
 export default function IssuerPage() {
   const [userId, setUserId] = useState("");
@@ -31,7 +31,7 @@ export default function IssuerPage() {
       return;
     }
     saveLocalNote({ ownerSecret, balance: amount, nonce, commitment, asset, policyId, proofMode: "provekit" });
-    setStatus(`Created private note ${commitment.slice(0, 18)}... and stored the secret only in this browser.`);
+    setStatus(`Created private note ${shortNoteId(commitment)} and stored the secret only in this browser.`);
   }
 
   return (

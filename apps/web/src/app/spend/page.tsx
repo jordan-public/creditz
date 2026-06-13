@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { WorldIdButton } from "@/components/WorldIdButton";
 import { apiFetch } from "@/lib/api-client";
-import { loadLocalNote, randomNoteField, saveLocalNote } from "@/lib/client-note";
+import { loadLocalNote, randomNoteField, saveLocalNote, shortNoteId } from "@/lib/client-note";
 
 type Invoice = {
   merchant_id: string;
@@ -83,7 +83,7 @@ export default function SpendPage() {
       commitment: proofBody.nextNote.commitment,
       proofMode: "provekit"
     });
-    setStatus(`Paid ${invoice.amount} minor units. New hidden commitment ${proof.new_commitment.slice(0, 18)}...`);
+    setStatus(`Paid ${invoice.amount} minor units. New hidden commitment ${shortNoteId(proof.new_commitment)}.`);
   }
 
   return (

@@ -53,3 +53,7 @@ export function makeCircuitCommitment(ownerSecret: string, asset: string, balanc
 export function makeCircuitNullifier(ownerSecret: string, nonce: string, invoiceNonce: string) {
   return circuitHash(ownerSecret, nonce, invoiceNonce, 0n, 0n);
 }
+
+export function shortNoteId(value: string) {
+  return value.startsWith("0x") ? `0x...${value.slice(-16)}` : `${value.slice(0, 8)}...${value.slice(-8)}`;
+}
