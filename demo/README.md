@@ -31,4 +31,4 @@ Open the image on a laptop or share it with a phone, then scan the QR from World
 
 ## Video
 
-Place the demo video in this folder when it is ready.
+The demo video can be downloaded [here](./Creditz.mov) or viewed on [YouTube](https://youtu.be/bug1XJ2FtrU).

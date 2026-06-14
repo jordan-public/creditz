@@ -1,3 +1,5 @@
+For demo and video click [here](./demo/README.md).
+
 # Creditz
 
 **Creditz** is a World Mini App concept for **human-bound, private, reloadable spending credits**.
