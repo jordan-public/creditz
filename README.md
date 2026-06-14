@@ -346,7 +346,7 @@ pnpm tunnel:backend
 3. The Pages workflow currently publishes the static frontend to the `gh-pages` branch and defaults to the tunnel started for this demo:
 
 ```text
-https://mrjtfd-ip-98-113-54-218.tunnelmole.net
+https://jux1g6-ip-98-113-54-218.tunnelmole.net
 ```
 
 If you restart `pnpm tunnel:backend`, Tunnelmole may print a new URL. Override the default by setting repository variable `PAGES_API_BASE_URL` to the new tunnel URL, or update `.github/workflows/pages.yml` and push again.
