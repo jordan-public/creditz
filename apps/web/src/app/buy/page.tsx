@@ -55,7 +55,6 @@ export default function BuyPage() {
     type: "info",
     message: "Deposit Base Sepolia USDC with Blink, then issue the same amount of private Credits."
   });
-  const [showDirectFallback, setShowDirectFallback] = useState(false);
   const { status: blinkStatus, requestDeposit, displayMessage, error } = useBlinkDeposit({
     signer: blinkSigner,
     environment: "sandbox",
@@ -89,7 +88,6 @@ export default function BuyPage() {
     }
 
     setStatus({ type: "info", message: "Opening Blink payment flow..." });
-    setShowDirectFallback(false);
     try {
       const result = await requestDeposit({
         amount: depositAmount,
@@ -139,10 +137,9 @@ export default function BuyPage() {
       const code = error?.code ?? (caught instanceof Error && "code" in caught ? String(caught.code) : null);
       const message = displayMessage ?? (caught instanceof Error ? caught.message : "Blink payment failed.");
       if (isDepositErrorCode(caught, "DEPOSIT_DISMISSED")) {
-        setShowDirectFallback(true);
         setStatus({
           type: "error",
-          message: `${message} (${code ?? "DEPOSIT_DISMISSED"}). Try the direct Blink page below.`
+          message: `${message} (${code ?? "DEPOSIT_DISMISSED"}). Try the direct/manual Blink button below.`
         });
         return;
       }
@@ -191,7 +188,10 @@ export default function BuyPage() {
     url.searchParams.set("merchantId", response.merchantId);
     url.searchParams.set("payload", response.payload);
     url.searchParams.set("signature", response.signature);
-    window.location.assign(url.toString());
+    const opened = window.open(url.toString(), "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.assign(url.toString());
+    }
   }
 
   return (
@@ -223,11 +223,9 @@ export default function BuyPage() {
             loading={blinkStatus === "signer-loading"}
           />
         </div>
-        {showDirectFallback ? (
-          <button type="button" onClick={openBlinkDirectly}>
-            Open Blink directly
-          </button>
-        ) : null}
+        <button type="button" onClick={openBlinkDirectly}>
+          Open Blink directly / manual deposit
+        </button>
         <div className={`status ${status.type === "ok" ? "ok" : status.type === "error" ? "error" : ""}`}>
           {status.message}
         </div>
