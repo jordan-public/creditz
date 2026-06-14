@@ -79,6 +79,26 @@ textarea {
   justify-content: flex-end;
 }
 
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-label,
+.action-group > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .nav a,
 .button,
 button {
@@ -166,6 +186,21 @@ button.danger {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 24px;
+}
+
+.action-groups {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.action-group {
+  display: grid;
+  gap: 8px;
+}
+
+.action-group .actions {
+  margin-top: 0;
 }
 
 .inline-actions {
@@ -302,6 +337,11 @@ code {
 
   .nav {
     justify-content: flex-start;
+  }
+
+  .nav-group {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .hero {

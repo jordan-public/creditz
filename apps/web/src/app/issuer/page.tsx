@@ -10,7 +10,7 @@ export default function IssuerPage() {
   const [amount, setAmount] = useState("25000000");
   const [policyId, setPolicyId] = useState("campus-cafeteria-v1");
   const [replaceNote, setReplaceNote] = useState(false);
-  const [status, setStatus] = useState("Load 25 Credits for the registered local user.");
+  const [status, setStatus] = useState("Load 25 Credits for the registered local user. No issuer World ID proof is required.");
 
   useEffect(() => {
     setUserId(window.localStorage.getItem("creditz.user-id") ?? "");
@@ -60,7 +60,10 @@ export default function IssuerPage() {
   return (
     <AppShell>
       <h1>Issuer reload</h1>
-      <p className="lead">Create a private credit note commitment for a registered user. For the MVP, the browser keeps the note secret.</p>
+      <p className="lead">
+        Create a private credit note commitment for a registered user. Issuer authorization is separate from World ID; for the
+        MVP, the browser keeps the note secret.
+      </p>
       <section className="panel form">
         <label>
           User ID
