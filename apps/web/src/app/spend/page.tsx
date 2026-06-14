@@ -17,13 +17,16 @@ type Invoice = {
   policy_id: string;
 };
 
-const proverMode = process.env.NEXT_PUBLIC_PROVER_MODE === "miniapp" ? "miniapp" : "backend";
+type ProverMode = "backend" | "miniapp";
 
 export default function SpendPage() {
   const [userId, setUserId] = useState("");
   const [rawInvoice, setRawInvoice] = useState("");
   const [status, setStatus] = useState("Paste the merchant QR payload, then approve the World ID spend.");
   const [balanceStatus, setBalanceStatus] = useState("Balance is stored only in this browser.");
+  const [proverMode, setProverMode] = useState<ProverMode>(
+    process.env.NEXT_PUBLIC_PROVER_MODE === "miniapp" ? "miniapp" : "backend"
+  );
   const invoice = useMemo(() => {
     try {
       return rawInvoice ? (JSON.parse(rawInvoice) as Invoice) : null;
@@ -34,6 +37,16 @@ export default function SpendPage() {
 
   useEffect(() => {
     setUserId(window.localStorage.getItem("creditz.user-id") ?? "");
+    apiFetch("/api/config")
+      .then((response) => response.json())
+      .then((body: { proverMode?: ProverMode }) => {
+        if (body.proverMode === "miniapp" || body.proverMode === "backend") {
+          setProverMode(body.proverMode);
+        }
+      })
+      .catch(() => {
+        setProverMode(process.env.NEXT_PUBLIC_PROVER_MODE === "miniapp" ? "miniapp" : "backend");
+      });
   }, []);
 
   function showBalance() {
