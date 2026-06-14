@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorldIdButton } from "@/components/WorldIdButton";
 import { apiFetch } from "@/lib/api-client";
 import { loadLocalNote, randomNoteField, saveLocalNote, shortNoteId } from "@/lib/client-note";
+import { proveInMiniApp } from "@/lib/miniapp-prover";
 
 type Invoice = {
   merchant_id: string;
@@ -15,6 +16,8 @@ type Invoice = {
   expires_at: number;
   policy_id: string;
 };
+
+const proverMode = process.env.NEXT_PUBLIC_PROVER_MODE === "miniapp" ? "miniapp" : "backend";
 
 export default function SpendPage() {
   const [userId, setUserId] = useState("");
@@ -66,15 +69,36 @@ export default function SpendPage() {
     }
 
     const newNonce = randomNoteField();
-    setStatus("Generating ProveKit balance proof...");
-    const proofResponse = await apiFetch("/api/provekit/prove", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ note, invoice, newNonce })
-    });
-    const proofBody = await proofResponse.json();
-    if (!proofResponse.ok) {
-      setStatus(proofBody.error ?? "ProveKit proof generation failed.");
+    setStatus(proverMode === "miniapp" ? "Generating ProveKit balance proof in the Mini App..." : "Generating ProveKit balance proof...");
+
+    let proofBody: {
+      proof: {
+        new_commitment: string;
+      };
+      nextNote: {
+        balance: string;
+        nonce: string;
+        commitment: string;
+      };
+    };
+    try {
+      if (proverMode === "miniapp") {
+        proofBody = await proveInMiniApp(note, invoice, newNonce);
+      } else {
+        const proofResponse = await apiFetch("/api/provekit/prove", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ note, invoice, newNonce })
+        });
+        const body = await proofResponse.json();
+        if (!proofResponse.ok) {
+          setStatus(body.error ?? "ProveKit proof generation failed.");
+          return;
+        }
+        proofBody = body;
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "ProveKit proof generation failed.");
       return;
     }
 
@@ -132,6 +156,7 @@ export default function SpendPage() {
           onVerified={submitSpend}
         />
         <div className="status">{status}</div>
+        <div className="status">Prover mode: {proverMode === "miniapp" ? "Mini App" : "Backend"}.</div>
       </section>
     </AppShell>
   );

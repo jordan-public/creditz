@@ -411,6 +411,8 @@ That test submits the proof through `/api/spend`, checks that the new commitment
 
 The Mini App spend screen uses the same verifier path. The issuer page creates a circuit-compatible local note, `/spend` asks `/api/provekit/prove` to generate a proof from that note and the merchant invoice, then submits the returned proof envelope to `/api/spend`. For a real phone demo, run the backend with `PROVEKIT_CLI`, `PROVEKIT_PROVER_KEY`, `PROVEKIT_VERIFIER_KEY`, `PROVEKIT_VERIFY_BIN=node`, and `PROVEKIT_VERIFY_ARGS=/absolute/path/to/scripts/provekit-verify.mjs` set. MVP limitation: proving currently happens on the backend, so the backend temporarily receives the private note witness. Verification and nullifier enforcement are real; client-side or delegated private proving is future work.
 
+Set `PROVER_MODE=backend` to keep that working flow. The `mini-app-prover` branch adds `PROVER_MODE=miniapp` as an experimental path: the spend page builds the same public proof statement in the Mini App and calls a browser prover adapter at `window.CreditzProveKit`. It does not fake or bypass proof generation. If no browser-compatible ProveKit provider is loaded, the spend stops before submission. Verification still happens in `/api/spend` on the backend.
+
 Spend nullifier checks are enforced before ledger mutation and backed by either the SQLite primary key or, in `LEDGER_MODE=onchain`, the registry contract:
 
 - old commitment must belong to the spending user,

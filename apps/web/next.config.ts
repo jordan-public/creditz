@@ -4,6 +4,9 @@ const isGithubPages = process.env.GITHUB_PAGES === "true";
 const repoBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/creditz";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_PROVER_MODE: process.env.NEXT_PUBLIC_PROVER_MODE ?? process.env.PROVER_MODE ?? "backend"
+  },
   ...(isGithubPages
     ? {
         output: "export" as const,
