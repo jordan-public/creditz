@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { CircleDollarSign } from "lucide-react";
+import { appHref } from "@/lib/app-href";
 
 const navGroups = [
   {
@@ -26,21 +26,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="shell">
       <header className="topbar">
-        <Link href="/" className="brand">
+        <a href={appHref("/")} className="brand">
           <span className="brand-mark">
             <CircleDollarSign size={18} />
           </span>
           Creditz
-        </Link>
+        </a>
         <nav className="nav" aria-label="Main navigation">
           {navGroups.map((group) => (
             <div className="nav-group" key={group.label}>
               <span className="nav-label">{group.label}</span>
               <div className="nav-links">
                 {group.items.map(([href, label]) => (
-                  <Link key={href} href={href}>
+                  <a key={href} href={appHref(href)}>
                     {label}
-                  </Link>
+                  </a>
                 ))}
               </div>
             </div>
