@@ -48,7 +48,7 @@ export default function BuyPage() {
   const [policyId, setPolicyId] = useState("campus-cafeteria-v1");
   const [status, setStatus] = useState<{ type: "ok" | "error" | "info"; message: string }>({
     type: "info",
-    message: "Buy Credits with Base Sepolia USDC through Blink, then issue the same amount of private Credits."
+    message: "Deposit Base Sepolia USDC with Blink, then issue the same amount of private Credits."
   });
   const { status: blinkStatus, requestDeposit, displayMessage, error } = useBlinkDeposit({
     signer: blinkSigner,
@@ -135,7 +135,7 @@ export default function BuyPage() {
     <AppShell>
       <h1>Buy Credits</h1>
       <p className="lead">
-        Pay USDC through Blink on Base Sepolia. When Blink reports the transfer complete, Creditz issues the same
+        Deposit USDC through Blink on Base Sepolia. When Blink reports the transfer complete, Creditz issues the same
         amount as private Credits using the regular issuer path.
       </p>
       <section className="panel form">
