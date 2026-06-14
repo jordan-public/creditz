@@ -210,6 +210,10 @@ button.danger {
   align-items: stretch;
 }
 
+.blink-button-wrap {
+  width: min(360px, 100%);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

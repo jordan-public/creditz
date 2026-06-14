@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { appHref } from "@/lib/app-href";
-import { BadgeCheck, Landmark, QrCode, ShieldCheck, WalletCards } from "lucide-react";
+import { BadgeCheck, CreditCard, Landmark, QrCode, ShieldCheck, WalletCards } from "lucide-react";
 
 export default function Home() {
   return (
@@ -27,6 +27,9 @@ export default function Home() {
             <div className="action-group">
               <span>Operations</span>
               <div className="actions">
+                <a className="button primary" href={appHref("/buy")}>
+                  <CreditCard size={18} /> Buy credits
+                </a>
                 <a className="button" href={appHref("/issuer")}>
                   <WalletCards size={18} /> Reload credits
                 </a>

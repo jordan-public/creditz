@@ -6,6 +6,7 @@ const navGroups = [
     label: "User",
     items: [
       ["/register", "Register"],
+      ["/buy", "Buy"],
       ["/spend", "Spend"]
     ]
   },

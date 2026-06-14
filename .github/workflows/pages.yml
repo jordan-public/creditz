@@ -34,6 +34,10 @@ jobs:
           NEXT_PUBLIC_WORLD_APP_ID: ${{ vars.NEXT_PUBLIC_WORLD_APP_ID || 'app_dec1e4137e35b9ee7a7230b897cbd908' }}
           NEXT_PUBLIC_WORLD_ACTION_REGISTER: creditz-register-v1
           NEXT_PUBLIC_WORLD_ACTION_SPEND: creditz-spend-v1
+          NEXT_PUBLIC_BLINK_MERCHANT_ID: ${{ vars.NEXT_PUBLIC_BLINK_MERCHANT_ID || 'f3d84a7d-82e2-48f1-a5bb-cd01540ad204' }}
+          NEXT_PUBLIC_BLINK_CHAIN_ID: "84532"
+          NEXT_PUBLIC_BLINK_TOKEN_ADDRESS: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          NEXT_PUBLIC_BLINK_TREASURY_ADDRESS: ${{ vars.NEXT_PUBLIC_BLINK_TREASURY_ADDRESS || '0x1a6aafb61fbfced49E2fB078179787E8e866fca9' }}
         run: pnpm build:pages
       - name: Publish gh-pages branch
         env:

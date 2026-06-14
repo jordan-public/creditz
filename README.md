@@ -359,6 +359,29 @@ https://jordan-public.github.io/creditz
 
 If the tunnel URL changes, update `PAGES_API_BASE_URL` and rerun the Pages workflow.
 
+## Blink Buy Flow
+
+The `blink` branch adds a `/buy` screen and top-nav Buy action. It uses Blink's web deposit SDK in sandbox mode so a user can pay Base Sepolia USDC and receive the same amount as private Creditz Credits.
+
+Local sandbox configuration:
+
+```bash
+BLINK_MERCHANT_ID=
+MERCHANT_ID=
+MERCHANT_PRIVATE_KEY=
+BLINK_API_BASE_URL=https://api-sandbox.blink.cash
+NEXT_PUBLIC_BLINK_MERCHANT_ID=
+NEXT_PUBLIC_BLINK_CHAIN_ID=84532
+NEXT_PUBLIC_BLINK_TOKEN_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+NEXT_PUBLIC_BLINK_TREASURY_ADDRESS=
+```
+
+`MERCHANT_PRIVATE_KEY` must stay server-side only. For local development it is stored in `apps/web/.env.local`, which is git-ignored. The key pair generated for this branch lives under `.blink/`, which is also git-ignored.
+
+The signer endpoint is `/api/sign-payment`. It signs only the base64url-encoded Blink payload string with ECDSA P-256 + SHA-256, and it allowlists the configured Base Sepolia chain, USDC token, and Creditz treasury address. After Blink returns a completed transfer to the client, `/buy` calls the existing `/api/reload` path to issue matching private Credits into the local note.
+
+Production caveat: the current branch trusts the client-side Blink `DepositResult` before issuing Credits. Before shipping, add server-side transfer-status verification and reconciliation using Blink transfer metadata/reference, plus signer authentication and rate limiting.
+
 ## Demo Script
 
 Demo access artifact:

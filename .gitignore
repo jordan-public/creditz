@@ -2,6 +2,8 @@
 .env.*
 !.env.example
 .DS_Store
+*.pem
+.blink/
 node_modules
 .next
 out
