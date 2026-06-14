@@ -418,6 +418,14 @@ Spend nullifier checks are enforced before ledger mutation and backed by either 
 - new commitment must not already exist,
 - invoice amount, merchant, asset, policy, and expiry must match the proof statement.
 
+## Implementation Notes
+
+The deployed hackathon MVP uses real World ID checks, real Noir/ProveKit proof generation and verification, and on-chain storage for commitments and spent nullifiers. The deployed verifier model is still backend-attested: the backend verifies the private balance proof and submits a signed attestation to `CreditRegistry.sol`, which then records the nullifier, new commitment, and merchant settlement.
+
+We also tried a direct on-chain verifier path. Barretenberg generated a Solidity UltraHonk verifier from the Noir circuit, the registry was wired to call `verify(proof, publicInputs)`, and the backend was able to produce EVM-style proof bytes. The generated verifier compiled locally, but its deployed bytecode was about 27.7 KB, which is above the EVM 24 KB deployed-contract limit. World Chain Sepolia therefore cannot deploy it as a single verifier contract.
+
+The failed verifier experiment is preserved on the `on-chain-verifier` branch. To make fully on-chain proof verification work later, Creditz needs a split or optimized verifier, a recursive wrapper, a Groth16 verifier path, or a smaller circuit/proving setup with an EVM-sized verifier.
+
 ## Contracts
 
 `contracts/src/CreditRegistry.sol` implements the required entry points:
