@@ -53,7 +53,8 @@ export default function BuyPage() {
   const { status: blinkStatus, requestDeposit, displayMessage, error } = useBlinkDeposit({
     signer: blinkSigner,
     environment: "sandbox",
-    merchantId: blinkMerchantId
+    merchantId: blinkMerchantId,
+    debug: true
   });
 
   useEffect(() => {
@@ -126,8 +127,10 @@ export default function BuyPage() {
         type: "ok",
         message: `Blink transfer ${result.transfer.id} ${result.transfer.status}. Issued ${minorUnits} Credits minor units into private note ${shortNoteId(commitment)}.`
       });
-    } catch {
-      setStatus({ type: "error", message: displayMessage ?? "Blink payment failed." });
+    } catch (caught) {
+      const code = error?.code ?? (caught instanceof Error && "code" in caught ? String(caught.code) : null);
+      const message = displayMessage ?? (caught instanceof Error ? caught.message : "Blink payment failed.");
+      setStatus({ type: "error", message: code ? `${message} (${code})` : message });
     }
   }
 
@@ -161,7 +164,7 @@ export default function BuyPage() {
           />
         </div>
         <div className={`status ${status.type === "ok" ? "ok" : status.type === "error" ? "error" : ""}`}>
-          {error ? displayMessage : status.message}
+          {status.message}
         </div>
         <p className="muted">
           Destination: Base Sepolia USDC to <code>{blinkTreasury || "not configured"}</code>
