@@ -29,6 +29,10 @@ Open the image on a laptop or share it with a phone, then scan the QR from World
 5. Show `/debug` with commitments, spent nullifiers, merchant, and invoice state.
 6. Replay the same invoice and show that it fails.
 
+## Onchain Data
+
+The contracts that records the commitments and the nullifiers can be seen at https://sepolia.worldscan.org/address/0xd33aff8861477f657c1f32b352a825d91eda31f5 .
+
 ## Video
 
 The demo video can be downloaded [here](./Creditz.mov) or viewed on [YouTube](https://youtu.be/bug1XJ2FtrU).
