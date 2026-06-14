@@ -51,6 +51,7 @@ export default function BuyPage() {
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("25.00");
   const [policyId, setPolicyId] = useState("campus-cafeteria-v1");
+  const [directUrl, setDirectUrl] = useState("");
   const [status, setStatus] = useState<{ type: "ok" | "error" | "info"; message: string }>({
     type: "info",
     message: "Deposit Base Sepolia USDC with Blink, then issue the same amount of private Credits."
@@ -167,7 +168,7 @@ export default function BuyPage() {
       return;
     }
 
-    setStatus({ type: "info", message: "Opening Blink as a top-level page..." });
+    setStatus({ type: "info", message: "Preparing a signed Blink payment link..." });
     const reference = `creditz-buy-direct-${Date.now()}`;
     const response = await blinkSigner({
       amount: depositAmount,
@@ -188,9 +189,21 @@ export default function BuyPage() {
     url.searchParams.set("merchantId", response.merchantId);
     url.searchParams.set("payload", response.payload);
     url.searchParams.set("signature", response.signature);
-    const opened = window.open(url.toString(), "_blank", "noopener,noreferrer");
-    if (!opened) {
-      window.location.assign(url.toString());
+    setDirectUrl(url.toString());
+    setStatus({
+      type: "info",
+      message:
+        "Signed Blink link ready. Open it in the current tab, or copy it into MetaMask's browser if World App keeps the wallet flow stuck."
+    });
+  }
+
+  async function copyDirectUrl() {
+    if (!directUrl) return;
+    try {
+      await navigator.clipboard.writeText(directUrl);
+      setStatus({ type: "ok", message: "Copied the signed Blink link." });
+    } catch {
+      setStatus({ type: "error", message: "Copy failed. Select the link field and copy it manually." });
     }
   }
 
@@ -224,8 +237,21 @@ export default function BuyPage() {
           />
         </div>
         <button type="button" onClick={openBlinkDirectly}>
-          Open Blink directly / manual deposit
+          Prepare external Blink link
         </button>
+        {directUrl ? (
+          <div className="external-link-box">
+            <input value={directUrl} readOnly aria-label="Signed Blink payment link" />
+            <div className="inline-actions">
+              <button type="button" onClick={() => window.location.assign(directUrl)}>
+                Open in current tab
+              </button>
+              <button type="button" onClick={copyDirectUrl}>
+                Copy link
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className={`status ${status.type === "ok" ? "ok" : status.type === "error" ? "error" : ""}`}>
           {status.message}
         </div>

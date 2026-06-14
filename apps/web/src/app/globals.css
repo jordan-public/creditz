@@ -210,6 +210,16 @@ button.danger {
   align-items: stretch;
 }
 
+.external-link-box {
+  display: grid;
+  gap: 10px;
+}
+
+.external-link-box input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .blink-button-wrap {
   width: min(360px, 100%);
 }
