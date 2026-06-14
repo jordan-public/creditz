@@ -11,6 +11,7 @@ const blinkChainId = Number(process.env.NEXT_PUBLIC_BLINK_CHAIN_ID ?? "84532");
 const blinkToken = process.env.NEXT_PUBLIC_BLINK_TOKEN_ADDRESS ?? "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const blinkTreasury = process.env.NEXT_PUBLIC_BLINK_TREASURY_ADDRESS ?? "";
 const blinkMerchantId = process.env.NEXT_PUBLIC_BLINK_MERCHANT_ID;
+const blinkWebviewBaseUrl = "https://pay-sandbox.blink.cash";
 
 async function blinkSigner(data: SignerRequest) {
   const response = await apiFetch("/api/sign-payment", {
@@ -42,6 +43,10 @@ function amountNumber(amount: string) {
   return value;
 }
 
+function isDepositErrorCode(error: unknown, code: string) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}
+
 export default function BuyPage() {
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("25.00");
@@ -50,11 +55,13 @@ export default function BuyPage() {
     type: "info",
     message: "Deposit Base Sepolia USDC with Blink, then issue the same amount of private Credits."
   });
+  const [showDirectFallback, setShowDirectFallback] = useState(false);
   const { status: blinkStatus, requestDeposit, displayMessage, error } = useBlinkDeposit({
     signer: blinkSigner,
     environment: "sandbox",
     merchantId: blinkMerchantId,
-    debug: true
+    debug: true,
+    enableFullWidget: true
   });
 
   useEffect(() => {
@@ -82,6 +89,7 @@ export default function BuyPage() {
     }
 
     setStatus({ type: "info", message: "Opening Blink payment flow..." });
+    setShowDirectFallback(false);
     try {
       const result = await requestDeposit({
         amount: depositAmount,
@@ -130,8 +138,60 @@ export default function BuyPage() {
     } catch (caught) {
       const code = error?.code ?? (caught instanceof Error && "code" in caught ? String(caught.code) : null);
       const message = displayMessage ?? (caught instanceof Error ? caught.message : "Blink payment failed.");
+      if (isDepositErrorCode(caught, "DEPOSIT_DISMISSED")) {
+        setShowDirectFallback(true);
+        setStatus({
+          type: "error",
+          message: `${message} (${code ?? "DEPOSIT_DISMISSED"}). Try the direct Blink page below.`
+        });
+        return;
+      }
       setStatus({ type: "error", message: code ? `${message} (${code})` : message });
     }
+  }
+
+  async function openBlinkDirectly() {
+    if (!userId) {
+      setStatus({ type: "error", message: "Register first so the Credits can be issued to your local user." });
+      return;
+    }
+    if (!blinkTreasury) {
+      setStatus({ type: "error", message: "Blink treasury address is not configured." });
+      return;
+    }
+
+    let depositAmount: number;
+    let minorUnits: string;
+    try {
+      depositAmount = amountNumber(amount);
+      minorUnits = creditsMinorUnits(amount);
+    } catch (caught) {
+      setStatus({ type: "error", message: caught instanceof Error ? caught.message : "Invalid amount." });
+      return;
+    }
+
+    setStatus({ type: "info", message: "Opening Blink as a top-level page..." });
+    const reference = `creditz-buy-direct-${Date.now()}`;
+    const response = await blinkSigner({
+      amount: depositAmount,
+      chainId: blinkChainId,
+      address: blinkTreasury,
+      token: blinkToken,
+      callbackScheme: null,
+      url: blinkWebviewBaseUrl,
+      version: "v1",
+      reference,
+      metadata: { product: "creditz", userId, creditsMinorUnits: minorUnits, mode: "direct" }
+    });
+    window.localStorage.setItem(
+      "creditz.pending-blink-buy",
+      JSON.stringify({ reference, userId, amount: minorUnits, policyId, createdAt: new Date().toISOString() })
+    );
+    const url = new URL(blinkWebviewBaseUrl);
+    url.searchParams.set("merchantId", response.merchantId);
+    url.searchParams.set("payload", response.payload);
+    url.searchParams.set("signature", response.signature);
+    window.location.assign(url.toString());
   }
 
   return (
@@ -163,6 +223,11 @@ export default function BuyPage() {
             loading={blinkStatus === "signer-loading"}
           />
         </div>
+        {showDirectFallback ? (
+          <button type="button" onClick={openBlinkDirectly}>
+            Open Blink directly
+          </button>
+        ) : null}
         <div className={`status ${status.type === "ok" ? "ok" : status.type === "error" ? "error" : ""}`}>
           {status.message}
         </div>
